@@ -1,0 +1,3 @@
+export const BASELINE_REQUIRED_DAYS = 28;
+
+export const MEANINGFUL_CHANGE_THRESHOLD = 20;
