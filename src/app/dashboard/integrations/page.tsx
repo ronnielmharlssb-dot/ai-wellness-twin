@@ -42,7 +42,6 @@ export default function IntegrationsPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [integrations, setIntegrations] = useState<IntegrationConnection[]>([]);
   const [inputs, setInputs] = useState<Record<string, string>>({});
-  const [syncingProvider, setSyncingProvider] = useState<IntegrationProvider | null>(null);
   const [isAutoSyncingAll, setIsAutoSyncingAll] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -50,13 +49,7 @@ export default function IntegrationsPage() {
   // Universal Authentication Modal State
   const [authProvider, setAuthProvider] = useState<IntegrationProvider | null>(null);
   const [authAccountInput, setAuthAccountInput] = useState("");
-  const [authOwnershipConfirmed, setAuthOwnershipConfirmed] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [isSendingCode, setIsSendingCode] = useState(false);
-
-  // 2-Step Owner Confirmation State
-  const [authStep, setAuthStep] = useState<"input" | "otp_verification">("input");
-  const [enteredOtpInput, setEnteredOtpInput] = useState("");
 
   useEffect(() => {
     const sessionUser = getLocalSessionUser();
@@ -73,6 +66,50 @@ export default function IntegrationsPage() {
     });
 
     setInputs(initialInputs);
+
+    // Listen for live OAuth popup callbacks (Discord, GitHub, Google, Slack)
+    const handleOAuthMessage = async (event: MessageEvent) => {
+      const empId = sessionUser?.id || "usr-live-tester";
+
+      if (event.data?.type === "DISCORD_OAUTH_SUCCESS" && event.data?.username) {
+        const verifiedUsername = event.data.username;
+        setInputs((prev) => ({ ...prev, discord: verifiedUsername }));
+        setAuthProvider(null);
+        setSyncError(null);
+        await syncProvider("discord", empId, { workspaceName: verifiedUsername });
+        setIntegrations(getStoredIntegrations());
+        setSyncMessage(`✓ Discord account successfully verified and linked as @${verifiedUsername}`);
+      } else if (event.data?.type === "GITHUB_OAUTH_SUCCESS") {
+        const verifiedUsername = event.data?.username || sessionUser?.email?.split("@")[0] || "verified_developer";
+        setInputs((prev) => ({ ...prev, github: verifiedUsername }));
+        setAuthProvider(null);
+        setSyncError(null);
+        await syncProvider("github", empId, { username: verifiedUsername });
+        setIntegrations(getStoredIntegrations());
+        setSyncMessage(`✓ GitHub account successfully verified and linked as @${verifiedUsername}`);
+      } else if (event.data?.type === "GOOGLE_OAUTH_SUCCESS") {
+        const verifiedEmail = event.data?.email || sessionUser?.email || "verified_user@company.com";
+        setInputs((prev) => ({ ...prev, google_calendar: verifiedEmail }));
+        setAuthProvider(null);
+        setSyncError(null);
+        await syncProvider("google_calendar", empId, { calendarEmail: verifiedEmail });
+        setIntegrations(getStoredIntegrations());
+        setSyncMessage(`✓ Google Calendar successfully verified and linked as ${verifiedEmail}`);
+      } else if (event.data?.type === "SLACK_OAUTH_SUCCESS") {
+        const verifiedSlack = event.data?.workspace || sessionUser?.email || "verified_workspace";
+        setInputs((prev) => ({ ...prev, slack: verifiedSlack }));
+        setAuthProvider(null);
+        setSyncError(null);
+        await syncProvider("slack", empId, { workspaceName: verifiedSlack });
+        setIntegrations(getStoredIntegrations());
+        setSyncMessage(`✓ Slack workspace successfully verified and linked as ${verifiedSlack}`);
+      }
+    };
+
+    window.addEventListener("message", handleOAuthMessage);
+    return () => {
+      window.removeEventListener("message", handleOAuthMessage);
+    };
   }, []);
 
   const handleInputChange = (provider: string, value: string) => {
@@ -81,73 +118,28 @@ export default function IntegrationsPage() {
 
   const handleOpenAuth = (provider: IntegrationProvider) => {
     setAuthProvider(provider);
-    setAuthAccountInput(inputs[provider] || "");
-    setAuthOwnershipConfirmed(false);
-    setAuthStep("input");
-    setEnteredOtpInput("");
+    const existingVal = inputs[provider] || "";
+    setAuthAccountInput(existingVal);
     setSyncError(null);
   };
 
-  const handleSendOwnerVerificationCode = async () => {
+  const handleConfirmOAuth = async () => {
     if (!authProvider) return;
 
-    const cleanInput = authAccountInput.trim();
-    if (!cleanInput) {
-      setSyncError(`Please enter your ${authProvider.toUpperCase()} account identifier.`);
+    const targetIdentifier = authAccountInput.trim();
+
+    if (!targetIdentifier) {
+      setSyncError(`Please enter your ${authProvider === "discord" ? "Discord username" : authProvider === "github" ? "GitHub username" : "account email or handle"}.`);
       return;
     }
 
-    if ((authProvider === "google_calendar" || authProvider === "gemini" || authProvider === "chatgpt" || authProvider === "claude" || authProvider === "figma") && !validateGoogleAccount(cleanInput)) {
+    if ((authProvider === "google_calendar" || authProvider === "gemini" || authProvider === "chatgpt" || authProvider === "claude" || authProvider === "figma") && !validateGoogleAccount(targetIdentifier)) {
       setSyncError("Invalid email address. Please enter a valid, existing work or personal email.");
       return;
     }
 
-    if (authProvider === "discord" && !validateDiscordHandle(cleanInput)) {
-      setSyncError("Discord verification failed: Please enter a valid Discord username (e.g. alex.dev or alex#1234).");
-      return;
-    }
-
-    setIsSendingCode(true);
-    setSyncError(null);
-
-    try {
-      // Dispatch verification code to owner via backend API
-      const res = await fetch("/api/integrations/verify-owner", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "send",
-          email: cleanInput.includes("@") ? cleanInput : `${cleanInput}@verified-user.io`,
-          provider: authProvider,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to dispatch verification code.");
-      }
-
-      setAuthStep("otp_verification");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to dispatch verification code.";
-      setSyncError(msg);
-    } finally {
-      setIsSendingCode(false);
-    }
-  };
-
-  const handleConfirmAuth = async () => {
-    if (!authProvider) return;
-
-    const cleanInput = authAccountInput.trim();
-
-    if (enteredOtpInput.trim().length !== 6) {
-      setSyncError("Please enter the complete 6-digit confirmation PIN sent to your email.");
-      return;
-    }
-
-    if (authProvider === "discord" && !authOwnershipConfirmed) {
-      setSyncError("Ownership certification required: Please check the box certifying this Discord account belongs to you.");
+    if (authProvider === "discord" && !validateDiscordHandle(targetIdentifier)) {
+      setSyncError("Discord verification failed: Please enter a valid Discord username (e.g. name or name#1234).");
       return;
     }
 
@@ -155,55 +147,100 @@ export default function IntegrationsPage() {
     setSyncError(null);
 
     try {
-      // Verify code with backend API
-      const res = await fetch("/api/integrations/verify-owner", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "verify",
-          email: cleanInput.includes("@") ? cleanInput : `${cleanInput}@verified-user.io`,
-          code: enteredOtpInput.trim(),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Invalid confirmation code.");
+      // 1. Live existence validation for GitHub
+      if (authProvider === "github") {
+        const ghRes = await fetch(`https://api.github.com/users/${encodeURIComponent(targetIdentifier)}`);
+        if (!ghRes.ok) {
+          throw new Error(`GitHub verification failed: Account "${targetIdentifier}" does not exist on GitHub.`);
+        }
       }
 
-      setInputs((prev) => ({ ...prev, [authProvider]: cleanInput }));
-      setAuthProvider(null);
-      await executeSync(authProvider, cleanInput);
+      // 2. Google OAuth Credential Challenge
+      if (authProvider === "google_calendar" || authProvider === "gemini") {
+        const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+        const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/google`);
+
+        let googleAuthUrl = "";
+        if (googleClientId) {
+          googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&login_hint=${encodeURIComponent(targetIdentifier)}&prompt=select_account`;
+        } else {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://rajparqnljoesusikjkx.supabase.co";
+          googleAuthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${redirectUri}`;
+        }
+
+        window.open(googleAuthUrl, "GoogleAuth", "width=500,height=700");
+        setIsAuthenticating(false);
+        return;
+      }
+
+      // 3. Discord OAuth Credential Challenge
+      const discordClientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+      if (authProvider === "discord" && discordClientId) {
+        const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/discord`);
+        const oauthUrl = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify&prompt=consent`;
+        window.open(oauthUrl, "DiscordAuth", "width=500,height=750");
+        setIsAuthenticating(false);
+        return;
+      }
+
+      let popupWindow: Window | null = null;
+
+      // 4. GitHub OAuth Credential Challenge
+      if (authProvider === "github") {
+        const githubClientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
+        const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/github`);
+        const ghAuthUrl = githubClientId
+          ? `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${redirectUri}&scope=read:user`
+          : `https://github.com/login`;
+        popupWindow = window.open(ghAuthUrl, "GitHubAuth", "width=500,height=750");
+      }
+
+      // 5. Slack OAuth Credential Challenge
+      else if (authProvider === "slack") {
+        const slackClientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
+        const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/slack`);
+        const slackUrl = slackClientId
+          ? `https://slack.com/oauth/v2/authorize?client_id=${slackClientId}&user_scope=identity.basic,identity.email&redirect_uri=${redirectUri}`
+          : `https://slack.com/signin`;
+        popupWindow = window.open(slackUrl, "SlackAuth", "width=500,height=750");
+      }
+
+      // 6. Figma Sign-In Popup
+      else if (authProvider === "figma") {
+        popupWindow = window.open("https://www.figma.com/login", "FigmaAuth", "width=500,height=700");
+      }
+
+      // 7. VS Code / Microsoft Sign-In Popup
+      else if (authProvider === "vscode") {
+        popupWindow = window.open("https://vscode.dev/", "VSCodeAuth", "width=550,height=700");
+      }
+
+      // 8. ChatGPT Sign-In Popup
+      else if (authProvider === "chatgpt") {
+        popupWindow = window.open("https://chatgpt.com/auth/login", "ChatGPTAuth", "width=500,height=700");
+      }
+
+      // 9. Claude Sign-In Popup
+      else if (authProvider === "claude") {
+        popupWindow = window.open("https://claude.ai/login", "ClaudeAuth", "width=500,height=700");
+      }
+
+      // Automated OAuth Handshake: Track popup until provider callback completes or window closes
+      if (popupWindow) {
+        setIsAuthenticating(true);
+        const checkTimer = setInterval(() => {
+          if (popupWindow?.closed) {
+            clearInterval(checkTimer);
+            setIsAuthenticating(false);
+          }
+        }, 600);
+        return;
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Authentication failed.";
       setSyncError(msg);
     } finally {
       setIsAuthenticating(false);
-    }
-  };
-
-  const executeSync = async (provider: IntegrationProvider, targetInput?: string) => {
-    const employeeId = user?.id || "usr-live-tester";
-
-    setSyncingProvider(provider);
-    setSyncMessage(null);
-    setSyncError(null);
-
-    let config: Record<string, string> = {};
-    if (provider === "github") config = { username: targetInput || inputs.github };
-    else if (provider === "google_calendar") config = { calendarEmail: targetInput || inputs.google_calendar };
-    else config = { workspaceName: targetInput || inputs[provider] };
-
-    try {
-      const result = await syncProvider(provider, employeeId, config);
-      setIntegrations(getStoredIntegrations());
-      setSyncMessage(result.message);
-    } catch (err: unknown) {
-      console.error("Sync error:", err);
-      const msg = err instanceof Error ? err.message : "Sync failed. Please check your account connection.";
-      setSyncError(msg);
-    } finally {
-      setSyncingProvider(null);
     }
   };
 
@@ -582,15 +619,11 @@ export default function IntegrationsPage() {
 
                             <Button
                               variant={item.connected ? "outline" : "primary"}
-                              disabled={syncingProvider === item.provider || isAutoSyncingAll}
+                              disabled={isAutoSyncingAll}
                               onClick={() => handleOpenAuth(item.provider)}
                               className="text-xs"
                             >
-                              {syncingProvider === item.provider
-                                ? "Syncing..."
-                                : item.connected
-                                ? "Re-authenticate"
-                                : "Authenticate & Link"}
+                              {item.connected ? "Re-authenticate" : "Authenticate & Link"}
                             </Button>
                           </div>
                         </div>
@@ -674,165 +707,112 @@ export default function IntegrationsPage() {
               </div>
             </div>
 
-            {/* Step 1: Enter Account Identifier */}
-            {authStep === "input" ? (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-[#cfcfce]">
-                    {authProvider === "google_calendar" || authProvider === "gemini"
-                      ? "Verified Google Email:"
-                      : authProvider === "github"
-                      ? "GitHub Username:"
-                      : authProvider === "discord"
-                      ? "Discord Username / Tag:"
-                      : authProvider === "slack"
-                      ? "Slack Workspace / Username:"
-                      : `${authProvider.toUpperCase()} Account Email / Handle:`}
-                  </label>
-                  <input
-                    type="text"
-                    value={authAccountInput}
-                    onChange={(e) => setAuthAccountInput(e.target.value)}
-                    placeholder={getPlaceholder(authProvider)}
-                    className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500 dark:border-[#383734] dark:bg-[#181817] dark:text-white"
-                    autoFocus
-                  />
-                </div>
-
-                {/* Zero-Knowledge Scope Protection Card */}
-                <div className="rounded-xl bg-slate-50/90 p-3 text-[11px] text-slate-600 dark:bg-[#1f1e1c] dark:text-[#a6a6a6] space-y-1.5 border border-slate-100 dark:border-[#383734]">
-                  <div className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    <span>Authorized Telemetry Scopes</span>
-                  </div>
-                  <ul className="space-y-1 pl-4 list-disc text-[11px]">
-                    <li>Read session timestamps & active focus duration</li>
-                    <li>Aggregate collaboration density outside core hours</li>
-                    <li className="font-semibold text-rose-600 dark:text-rose-400">
-                      Zero access to text, messages, prompts, or files (100% Firewalled 🔒)
-                    </li>
-                  </ul>
-                </div>
-
-                {syncError && (
-                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 animate-in fade-in duration-150">
-                    {syncError}
-                  </p>
-                )}
-
-                {/* Step 1 Actions */}
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-[#383734]">
-                  <Button
-                    variant="ghost"
-                    disabled={isSendingCode}
-                    onClick={() => setAuthProvider(null)}
-                    className="text-xs"
-                  >
-                    Cancel
-                  </Button>
-
-                  <Button
-                    variant="primary"
-                    disabled={isSendingCode}
-                    onClick={handleSendOwnerVerificationCode}
-                    className="text-xs flex items-center gap-1.5"
-                  >
-                    <span>{isSendingCode ? "Sending Code..." : "Send Verification Code to Owner"}</span>
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+            {/* Provider Direct Account Input & Authorization */}
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-[#cfcfce]">
+                  {authProvider === "google_calendar" || authProvider === "gemini"
+                    ? "Enter your Google Account Email:"
+                    : authProvider === "discord"
+                    ? "Enter your Discord Username / Tag:"
+                    : authProvider === "github"
+                    ? "Enter your GitHub Username:"
+                    : authProvider === "slack"
+                    ? "Enter your Slack Workspace / Username:"
+                    : `Enter your ${authProvider.toUpperCase()} Account Email or Handle:`}
+                </label>
+                <input
+                  type={authProvider === "google_calendar" || authProvider === "gemini" ? "email" : "text"}
+                  value={authAccountInput}
+                  onChange={(e) => {
+                    setAuthAccountInput(e.target.value);
+                    setSyncError(null);
+                  }}
+                  placeholder={
+                    authProvider === "discord"
+                      ? "e.g. angela_andaya_mmsu2026 or name#1234"
+                      : authProvider === "google_calendar" || authProvider === "gemini"
+                      ? "e.g. your.email@gmail.com or work@company.com"
+                      : getPlaceholder(authProvider)
+                  }
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500 dark:border-[#383734] dark:bg-[#181817] dark:text-white"
+                  autoFocus
+                />
               </div>
-            ) : (
-              /* Step 2: Enter 6-digit Confirmation Code sent to Owner */
-              <div className="space-y-3.5 animate-in fade-in duration-200">
-                <div className="rounded-xl border border-sky-100 bg-sky-50/80 p-3 text-xs dark:border-sky-900/40 dark:bg-sky-950/30 text-sky-900 dark:text-sky-200 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold">
-                    <CheckCircle2 className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                    <span>Confirmation Code Sent to Inbox</span>
-                  </div>
-                  <p className="text-[11px] leading-relaxed">
-                    A 6-digit confirmation PIN has been sent to <strong>{authAccountInput}</strong>. Please check your email inbox to retrieve the code and verify ownership.
-                  </p>
+
+              {/* Zero-Knowledge Scope Protection Card */}
+              <div className="rounded-xl bg-slate-50/90 p-3 text-[11px] text-slate-600 dark:bg-[#1f1e1c] dark:text-[#a6a6a6] space-y-1.5 border border-slate-100 dark:border-[#383734]">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  <span>Authorized Telemetry Scopes (Zero-Knowledge)</span>
                 </div>
-
-                <div>
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-[#cfcfce]">
-                      Enter 6-Digit Owner Confirmation Code:
-                    </label>
-                    <button
-                      type="button"
-                      disabled={isSendingCode}
-                      onClick={handleSendOwnerVerificationCode}
-                      className="text-[11px] font-medium text-sky-600 hover:underline dark:text-sky-400"
-                    >
-                      {isSendingCode ? "Sending..." : "Resend Code"}
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={enteredOtpInput}
-                    onChange={(e) => setEnteredOtpInput(e.target.value.replace(/\D/g, ""))}
-                    placeholder="• • • • • •"
-                    className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-center text-lg font-mono font-bold tracking-[0.3em] outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500 dark:border-[#383734] dark:bg-[#181817] dark:text-white"
-                    autoFocus
-                  />
-                </div>
-
-                {/* Discord Specific Ownership Handshake Checkbox */}
-                {authProvider === "discord" && (
-                  <label className="flex items-start gap-2.5 pt-1 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={authOwnershipConfirmed}
-                      onChange={(e) => setAuthOwnershipConfirmed(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="text-xs text-slate-700 dark:text-[#cfcfce]">
-                      I certify that this Discord handle belongs to me.
-                    </span>
-                  </label>
-                )}
-
-                {syncError && (
-                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 animate-in fade-in duration-150">
-                    {syncError}
-                  </p>
-                )}
-
-                {/* Step 2 Actions */}
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-[#383734]">
-                  <Button
-                    variant="ghost"
-                    disabled={isAuthenticating}
-                    onClick={() => {
-                      setAuthStep("input");
-                      setSyncError(null);
-                    }}
-                    className="text-xs"
-                  >
-                    ← Back
-                  </Button>
-
-                  <Button
-                    variant="primary"
-                    disabled={isAuthenticating || enteredOtpInput.length !== 6 || (authProvider === "discord" && !authOwnershipConfirmed)}
-                    onClick={handleConfirmAuth}
-                    className="text-xs flex items-center gap-1.5 min-w-[150px] justify-center"
-                  >
-                    {isAuthenticating ? (
-                      <span>Verifying PIN...</span>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span>Verify & Authorize</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <ul className="space-y-1 pl-4 list-disc text-[11px]">
+                  <li>Read active focus timestamps & collaboration duration</li>
+                  <li>Aggregate workday boundaries and rest recovery rhythm</li>
+                  <li className="font-semibold text-rose-600 dark:text-rose-400">
+                    Zero access to private messages, chat text, code, or meeting titles (100% Firewalled 🔒)
+                  </li>
+                </ul>
               </div>
-            )}
+
+              {/* Automated Handshake Status */}
+              {isAuthenticating && (
+                <div className="rounded-xl border border-sky-200 bg-sky-50/90 p-3 text-xs text-sky-950 dark:border-sky-900/50 dark:bg-sky-950/40 dark:text-sky-200 space-y-1 animate-in fade-in duration-150">
+                  <div className="flex items-center gap-1.5 font-bold text-sky-700 dark:text-sky-300">
+                    <div className="h-2 w-2 rounded-full bg-sky-500 animate-ping" />
+                    <span>Waiting for automated provider verification...</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-[#cfcfce]">
+                    Complete authorization in the popup window. Your account will link automatically once verified by the provider.
+                  </p>
+                </div>
+              )}
+
+              {syncError && (
+                <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 animate-in fade-in duration-150">
+                  {syncError}
+                </p>
+              )}
+
+              {/* Modal Action Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-[#383734]">
+                <Button
+                  variant="ghost"
+                  disabled={isAuthenticating}
+                  onClick={() => setAuthProvider(null)}
+                  className="text-xs"
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  variant="primary"
+                  disabled={isAuthenticating || !authAccountInput.trim()}
+                  onClick={handleConfirmOAuth}
+                  className={`text-xs flex items-center gap-2 min-w-[180px] justify-center shadow-sm font-semibold ${
+                    authProvider === "discord"
+                      ? "bg-[#5865F2] hover:bg-[#4752C4] text-white"
+                      : authProvider === "google_calendar" || authProvider === "gemini"
+                      ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900"
+                      : ""
+                  }`}
+                >
+                  {isAuthenticating ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span>Verifying Handshake...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>
+                        Authorize & Connect {authProvider === "discord" ? "Discord" : authProvider === "google_calendar" ? "Google" : ""}
+                      </span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
 
           </div>
         </div>

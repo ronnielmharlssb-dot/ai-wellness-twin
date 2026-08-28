@@ -10,7 +10,6 @@ import {
   Coffee,
   Moon,
   ShieldCheck,
-  Code2,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +44,6 @@ export function BaselineCalibrationSuite({
   const [afterHoursActivity, setAfterHoursActivity] = useState(15);
   const [dayFeeling, setDayFeeling] = useState<"energized" | "balanced" | "fatigued" | "drained">("balanced");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastSignalMessage, setLastSignalMessage] = useState<string | null>(null);
 
   // Listen for real-time telemetry updates from browser tracker and integrations
   useEffect(() => {
@@ -116,41 +114,6 @@ export function BaselineCalibrationSuite({
     existingMetrics.length > 0
       ? (existingMetrics.reduce((acc, m) => acc + m.breakFrequency, 0) / existingMetrics.length).toFixed(1)
       : "0";
-
-  const handleEmitLiveSignalPacket = (type: "vscode" | "calendar" | "break" | "evening") => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const metrics = getMetricsForEmployee(employeeId);
-    const todayMetric = metrics.find((m) => m.date === todayStr) || {
-      employeeId,
-      date: todayStr,
-      source: "telemetry",
-      workingHours: 0,
-      meetingLoad: 0,
-      breakFrequency: 0,
-      afterHoursActivity: 0,
-    };
-
-    let msg = "";
-    if (type === "vscode") {
-      todayMetric.workingHours = Number((todayMetric.workingHours + 0.5).toFixed(2));
-      msg = "⚡ Signal Received: VS Code focus pulse (+30m active work logged)";
-    } else if (type === "calendar") {
-      todayMetric.meetingLoad = Number((todayMetric.meetingLoad + 0.75).toFixed(2));
-      todayMetric.workingHours = Number((todayMetric.workingHours + 0.75).toFixed(2));
-      msg = "📅 Signal Received: Google Calendar event completed (+45m meeting logged)";
-    } else if (type === "break") {
-      todayMetric.breakFrequency += 1;
-      msg = "☕ Signal Received: Rest gap detected (≥5 mins break recorded)";
-    } else if (type === "evening") {
-      todayMetric.afterHoursActivity += 15;
-      todayMetric.workingHours = Number((todayMetric.workingHours + 0.25).toFixed(2));
-      msg = "🌙 Signal Received: Slack evening pulse (+15m after-hours recorded)";
-    }
-
-    saveEmployeeMetrics(todayMetric);
-    setLastSignalMessage(msg);
-    onMetricsUpdated();
-  };
 
   const handleSaveDailyMetric = (e: React.FormEvent) => {
     e.preventDefault();
@@ -339,83 +302,31 @@ export function BaselineCalibrationSuite({
           </div>
         )}
 
-        {/* Live Automatic Signal Ingestion Stream & Tester Bridge */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-[#383734] dark:bg-[#1f1e1c] space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              </span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">
-                Live Signal Telemetry Bridge
-              </span>
-              <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                {connectedIntegrations.length > 0 ? `${connectedIntegrations.length} Apps Connected` : "Listening for signals"}
-              </span>
+        {/* Live Automatic Signal Telemetry Status */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-[#383734] dark:bg-[#1f1e1c]">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            </span>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  Automatic Telemetry Bridge
+                </span>
+                <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  {connectedIntegrations.length > 0 ? `${connectedIntegrations.length} Apps Synced` : "Passive Listening Active"}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-[#a6a6a6]">
+                Genuine background signals from your workstation and connected tools stream organically into Day 1.
+              </p>
             </div>
-
-            <p className="text-[11px] text-slate-500 dark:text-[#a6a6a6]">
-              Workstation & integrated apps automatically feed signals to Day 1
-            </p>
           </div>
 
-          {/* Real-time Ticker / Feedback */}
-          {lastSignalMessage ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 text-xs font-medium text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300 animate-in fade-in duration-200">
-              {lastSignalMessage}
-            </div>
-          ) : (
-            <p className="text-[11px] text-slate-500 dark:text-[#888884]">
-              Connected apps stream focus pulses, calendar blocks, and break events directly into your baseline.
-            </p>
-          )}
-
-          {/* Test Signal Emitter Controls (For evaluators to test live signal reception) */}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[#888884] mr-1">
-              Test Signals:
-            </span>
-
-            <Button
-              variant="outline"
-              onClick={() => handleEmitLiveSignalPacket("vscode")}
-              className="text-[11px] h-7 px-2.5 bg-white hover:bg-slate-100 dark:bg-[#2c2b28] dark:hover:bg-white/[0.08]"
-              title="Simulate active coding pulse from VS Code"
-            >
-              <Code2 className="mr-1 h-3 w-3 text-sky-500" />
-              + VS Code (+30m)
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={() => handleEmitLiveSignalPacket("calendar")}
-              className="text-[11px] h-7 px-2.5 bg-white hover:bg-slate-100 dark:bg-[#2c2b28] dark:hover:bg-white/[0.08]"
-              title="Simulate calendar meeting block"
-            >
-              <Calendar className="mr-1 h-3 w-3 text-emerald-500" />
-              + Meeting (+45m)
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={() => handleEmitLiveSignalPacket("break")}
-              className="text-[11px] h-7 px-2.5 bg-white hover:bg-slate-100 dark:bg-[#2c2b28] dark:hover:bg-white/[0.08]"
-              title="Simulate rest break gap"
-            >
-              <Coffee className="mr-1 h-3 w-3 text-amber-500" />
-              + Rest Pause
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={() => handleEmitLiveSignalPacket("evening")}
-              className="text-[11px] h-7 px-2.5 bg-white hover:bg-slate-100 dark:bg-[#2c2b28] dark:hover:bg-white/[0.08]"
-              title="Simulate after-hours evening work"
-            >
-              <Moon className="mr-1 h-3 w-3 text-indigo-500" />
-              + Evening (+15m)
-            </Button>
+          <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            <span>100% Organic Recording</span>
           </div>
         </div>
 
