@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScoreGauge } from "@/components/ui/score-gauge";
 import { BaselineCalibrationSuite } from "@/components/ui/baseline-calibration-suite";
+import { ToolActivityBreakdown } from "@/components/ui/tool-activity-breakdown";
 import { LensCard } from "@/components/ui/lens-card";
 
 export default function DashboardPage() {
@@ -119,14 +120,20 @@ export default function DashboardPage() {
 
       {/* Baseline Calibration in Progress Suite */}
       {isBuilding ? (
-        <BaselineCalibrationSuite
-          employeeId={user?.id || "emp-001"}
-          daysCollected={assessment?.daysCollected ?? 0}
-          requiredDays={assessment?.requiredDays ?? 28}
-          onMetricsUpdated={() => loadUserData(user?.id || "emp-001")}
-        />
+        <div className="space-y-6">
+          <BaselineCalibrationSuite
+            employeeId={user?.id || "usr-live-tester"}
+            daysCollected={assessment?.daysCollected ?? 0}
+            requiredDays={assessment?.requiredDays ?? 28}
+            onMetricsUpdated={() => loadUserData(user?.id || "usr-live-tester")}
+          />
+
+          <ToolActivityBreakdown employeeId={user?.id || "usr-live-tester"} />
+        </div>
       ) : (
         <>
+          <ToolActivityBreakdown employeeId={user?.id || "usr-live-tester"} />
+
           {/* Unified Primary Hero Reflection Card */}
           <Card className="p-6 sm:p-7">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">

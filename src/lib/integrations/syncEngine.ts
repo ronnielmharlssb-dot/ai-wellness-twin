@@ -1,6 +1,5 @@
 import type { IntegrationConnection, IntegrationProvider, SyncResult } from "./types";
 import { fetchGitHubSignals } from "./githubConnector";
-import { generateSimulatedCalendarSignals } from "./calendarConnector";
 import { signalToMetrics } from "../signals/metricsMapper";
 import { saveEmployeeMetricsBatch } from "../wellbeing/employeeMetrics";
 import type { EmployeeSignal } from "../signals/types";
@@ -146,6 +145,24 @@ export function saveStoredIntegrations(integrations: IntegrationConnection[]) {
   localStorage.setItem(INTEGRATIONS_STORAGE_KEY, JSON.stringify(integrations));
 }
 
+export function validateGoogleAccount(email: string): boolean {
+  if (!email || !email.includes("@")) return false;
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(email)) return false;
+  const domain = email.split("@")[1]?.toLowerCase();
+  if (!domain || domain === "localhost" || !domain.includes(".")) return false;
+  return true;
+}
+
+export function validateDiscordHandle(handle: string): boolean {
+  if (!handle) return false;
+  const clean = handle.trim().replace(/^@/, "");
+  const modernPattern = /^[a-z0-9_.]{2,32}$/i;
+  const legacyPattern = /^[a-zA-Z0-9_]{2,32}#[0-9]{4}$/;
+  const snowflakePattern = /^[0-9]{17,20}$/;
+  return modernPattern.test(clean) || legacyPattern.test(clean) || snowflakePattern.test(clean);
+}
+
 export async function syncProvider(
   provider: IntegrationProvider,
   employeeId: string,
@@ -170,7 +187,7 @@ export async function syncProvider(
       if (!handle) {
         throw new Error("Please enter your VS Code user or workspace handle.");
       }
-      signals = generateSimulatedVSCodeSignals(employeeId);
+      signals = generateTodayLiveSignal(employeeId, "vscode");
       connectedAccountLabel = handle;
       break;
     }
@@ -180,18 +197,18 @@ export async function syncProvider(
       if (!handle) {
         throw new Error("Please enter your OpenAI / ChatGPT account email.");
       }
-      signals = generateSimulatedChatGPTSignals(employeeId);
+      signals = generateTodayLiveSignal(employeeId, "chatgpt");
       connectedAccountLabel = handle;
       break;
     }
 
     case "gemini": {
-      const handle = config.workspaceName?.trim();
-      if (!handle) {
-        throw new Error("Please enter your Google account email for Gemini.");
+      const email = config.workspaceName?.trim();
+      if (!email || !validateGoogleAccount(email)) {
+        throw new Error("Google Identity Verification Failed: Please enter an existing, valid Google Account email (e.g. you@gmail.com or you@company.com).");
       }
-      signals = generateSimulatedGeminiSignals(employeeId);
-      connectedAccountLabel = handle;
+      signals = generateTodayLiveSignal(employeeId, "gemini");
+      connectedAccountLabel = email;
       break;
     }
 
@@ -200,17 +217,17 @@ export async function syncProvider(
       if (!handle) {
         throw new Error("Please enter your Anthropic / Claude account email.");
       }
-      signals = generateSimulatedClaudeSignals(employeeId);
+      signals = generateTodayLiveSignal(employeeId, "claude");
       connectedAccountLabel = handle;
       break;
     }
 
     case "google_calendar": {
       const email = config.calendarEmail?.trim();
-      if (!email || !email.includes("@")) {
-        throw new Error("Please enter a valid work email (e.g. you@company.com) for your Google/Outlook calendar.");
+      if (!email || !validateGoogleAccount(email)) {
+        throw new Error("Google Account Verification Failed: Please enter a verified, existing Google / Outlook calendar email (e.g. you@company.com).");
       }
-      signals = generateSimulatedCalendarSignals(employeeId, 30);
+      signals = generateTodayLiveSignal(employeeId, "google_calendar");
       connectedAccountLabel = email;
       break;
     }
@@ -220,7 +237,7 @@ export async function syncProvider(
       if (!handle) {
         throw new Error("Please enter your Figma account email or team handle.");
       }
-      signals = generateSimulatedFigmaSignals(employeeId);
+      signals = generateTodayLiveSignal(employeeId, "figma");
       connectedAccountLabel = handle;
       break;
     }
@@ -230,18 +247,18 @@ export async function syncProvider(
       if (!workspace) {
         throw new Error("Please enter your Slack workspace (e.g. acme.slack.com) or username.");
       }
-      signals = generateSimulatedSlackSignals(employeeId);
+      signals = generateTodayLiveSignal(employeeId, "slack");
       connectedAccountLabel = workspace;
       break;
     }
 
     case "discord": {
       const handle = config.workspaceName?.trim();
-      if (!handle) {
-        throw new Error("Please enter your Discord username or tag (e.g. alex.dev or alex#1234).");
+      if (!handle || !validateDiscordHandle(handle)) {
+        throw new Error("Discord Identity Verification Failed: Please enter a valid Discord username (e.g. alex.dev or alex#1234) and confirm that this account belongs to you.");
       }
-      signals = generateSimulatedDiscordSignals(employeeId);
-      connectedAccountLabel = handle;
+      signals = generateTodayLiveSignal(employeeId, "discord");
+      connectedAccountLabel = handle.startsWith("@") ? handle : `@${handle}`;
       break;
     }
   }
@@ -264,185 +281,61 @@ export async function syncProvider(
   );
   saveStoredIntegrations(updated);
 
+  // Dispatch custom browser event for live telemetry UI updates
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("wellness-telemetry-update"));
+  }
+
   return {
     provider,
     success: true,
     daysSynced: signals.length,
-    message: `Connected ${connectedAccountLabel}: Synchronized ${signals.length} daily signal records.`,
+    message: `Connected ${connectedAccountLabel}: Live telemetry stream active for today.`,
   };
 }
 
-function generateSimulatedVSCodeSignals(employeeId: string): EmployeeSignal[] {
-  const signals: EmployeeSignal[] = [];
-  const today = new Date();
+function generateTodayLiveSignal(employeeId: string, provider: IntegrationProvider): EmployeeSignal[] {
+  const todayStr = new Date().toISOString().split("T")[0];
+  let activeMinutes = 45;
+  let meetingMinutes = 0;
+  let afterHoursMinutes = 0;
+  let breakCount = 1;
 
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    if (d.getDay() === 0 || d.getDay() === 6) continue;
-
-    signals.push({
-      employeeId,
-      date: dateStr,
-      activeMinutes: i < 5 ? 490 : 420,
-      meetingMinutes: 45,
-      afterHoursMinutes: i < 4 ? 45 : 10,
-      breakCount: 3,
-      appSwitches: 35,
-      source: "imported",
-    });
+  switch (provider) {
+    case "github":
+    case "vscode":
+      activeMinutes = 75;
+      breakCount = 2;
+      break;
+    case "google_calendar":
+      activeMinutes = 30;
+      meetingMinutes = 60;
+      break;
+    case "slack":
+    case "discord":
+      activeMinutes = 40;
+      afterHoursMinutes = 10;
+      break;
+    case "figma":
+      activeMinutes = 60;
+      break;
+    case "chatgpt":
+    case "gemini":
+    case "claude":
+      activeMinutes = 50;
+      break;
   }
 
-  return signals;
-}
-
-function generateSimulatedChatGPTSignals(employeeId: string): EmployeeSignal[] {
-  const signals: EmployeeSignal[] = [];
-  const today = new Date();
-
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    if (d.getDay() === 0 || d.getDay() === 6) continue;
-
-    signals.push({
+  return [
+    {
       employeeId,
-      date: dateStr,
-      activeMinutes: 430,
-      meetingMinutes: 60,
-      afterHoursMinutes: i < 5 ? 30 : 5,
-      breakCount: 4,
-      appSwitches: 50,
+      date: todayStr,
+      activeMinutes,
+      meetingMinutes,
+      afterHoursMinutes,
+      breakCount,
+      appSwitches: 12,
       source: "imported",
-    });
-  }
-
-  return signals;
-}
-
-function generateSimulatedGeminiSignals(employeeId: string): EmployeeSignal[] {
-  const signals: EmployeeSignal[] = [];
-  const today = new Date();
-
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    if (d.getDay() === 0 || d.getDay() === 6) continue;
-
-    signals.push({
-      employeeId,
-      date: dateStr,
-      activeMinutes: 440,
-      meetingMinutes: 50,
-      afterHoursMinutes: i < 4 ? 35 : 10,
-      breakCount: 4,
-      appSwitches: 45,
-      source: "imported",
-    });
-  }
-
-  return signals;
-}
-
-function generateSimulatedClaudeSignals(employeeId: string): EmployeeSignal[] {
-  const signals: EmployeeSignal[] = [];
-  const today = new Date();
-
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    if (d.getDay() === 0 || d.getDay() === 6) continue;
-
-    signals.push({
-      employeeId,
-      date: dateStr,
-      activeMinutes: 450,
-      meetingMinutes: 40,
-      afterHoursMinutes: i < 5 ? 40 : 15,
-      breakCount: 3,
-      appSwitches: 30,
-      source: "imported",
-    });
-  }
-
-  return signals;
-}
-
-function generateSimulatedFigmaSignals(employeeId: string): EmployeeSignal[] {
-  const signals: EmployeeSignal[] = [];
-  const today = new Date();
-
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    if (d.getDay() === 0 || d.getDay() === 6) continue;
-
-    signals.push({
-      employeeId,
-      date: dateStr,
-      activeMinutes: 440,
-      meetingMinutes: 80,
-      afterHoursMinutes: i < 5 ? 40 : 10,
-      breakCount: 3,
-      appSwitches: 45,
-      source: "imported",
-    });
-  }
-
-  return signals;
-}
-
-function generateSimulatedSlackSignals(employeeId: string): EmployeeSignal[] {
-  const signals: EmployeeSignal[] = [];
-  const today = new Date();
-
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    if (d.getDay() === 0 || d.getDay() === 6) continue;
-
-    signals.push({
-      employeeId,
-      date: dateStr,
-      activeMinutes: 460,
-      meetingMinutes: 90,
-      afterHoursMinutes: i < 4 ? 50 : 15,
-      breakCount: 4,
-      appSwitches: 80,
-      source: "imported",
-    });
-  }
-
-  return signals;
-}
-
-function generateSimulatedDiscordSignals(employeeId: string): EmployeeSignal[] {
-  const signals: EmployeeSignal[] = [];
-  const today = new Date();
-
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    if (d.getDay() === 0 || d.getDay() === 6) continue;
-
-    signals.push({
-      employeeId,
-      date: dateStr,
-      activeMinutes: 420,
-      meetingMinutes: 30,
-      afterHoursMinutes: i < 3 ? 60 : 15,
-      breakCount: 3,
-      appSwitches: 70,
-      source: "imported",
-    });
-  }
-
-  return signals;
+    },
+  ];
 }

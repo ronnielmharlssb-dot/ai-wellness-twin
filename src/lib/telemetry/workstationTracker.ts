@@ -1,6 +1,7 @@
 "use client";
 
 import { getLocalSessionUser } from "../supabase/auth";
+import { saveEmployeeMetrics } from "../wellbeing/employeeMetrics";
 
 export type TrackerState = {
   isRunning: boolean;
@@ -60,12 +61,13 @@ class WorkstationTrackerService {
     window.addEventListener("pointerdown", this.handleUserPresence);
     window.addEventListener("keydown", this.handleUserPresence);
 
-    // 2. Start 60-second heartbeat dispatch loop
+    // 2. Dispatch immediate initial handshake heartbeat, then start dispatch loop
+    this.tickAndDispatch();
     this.timer = setInterval(() => {
       this.tickAndDispatch();
-    }, 60000); // 60-second heartbeat
+    }, 45000); // 45-second heartbeat cycle
 
-    console.log("[WORKSTATION TRACKER]: Live telemetry heartbeat bridge activated.");
+    console.log("🟢 [WORKSTATION TRACKER]: Live telemetry heartbeat bridge activated.");
     this.notifyListeners();
   }
 
@@ -161,6 +163,14 @@ class WorkstationTrackerService {
 
       if (response.ok) {
         const data = await response.json();
+        if (data.summary?.todayMetrics) {
+          saveEmployeeMetrics(data.summary.todayMetrics);
+        }
+        console.log("⚡ [TELEMETRY PACKET RECORDED]:", {
+          activeMinutesToday: data.summary?.todayActiveMinutes ?? 0,
+          breaksToday: data.summary?.todayBreakCount ?? 0,
+          timestamp: payload.timestamp,
+        });
         // Dispatch custom browser event for reactive UI updates
         window.dispatchEvent(
           new CustomEvent("wellness-telemetry-update", { detail: data.summary })

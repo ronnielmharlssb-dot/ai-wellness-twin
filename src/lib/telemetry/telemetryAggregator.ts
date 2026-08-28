@@ -11,6 +11,8 @@ export type LiveTelemetrySummary = {
   lastHeartbeatTimestamp: string;
 };
 
+const serverMetricsStore: Record<string, EmployeeDailyMetrics[]> = {};
+
 /**
  * Atomically rolls up an incoming validated heartbeat into today's daily metric bucket.
  */
@@ -18,7 +20,14 @@ export function recordLiveHeartbeat(
   heartbeat: ValidatedHeartbeat
 ): LiveTelemetrySummary {
   const todayStr = new Date().toISOString().split("T")[0];
-  const existingMetrics = getMetricsForEmployee(heartbeat.employeeId);
+  
+  let existingMetrics: EmployeeDailyMetrics[] = [];
+  if (typeof window !== "undefined") {
+    existingMetrics = getMetricsForEmployee(heartbeat.employeeId);
+  } else {
+    existingMetrics = serverMetricsStore[heartbeat.employeeId] || [];
+  }
+
   const todayMetric = existingMetrics.find((m) => m.date === todayStr);
 
   const currentWorkingHours = todayMetric ? todayMetric.workingHours : 0;
@@ -41,15 +50,26 @@ export function recordLiveHeartbeat(
   const updatedMetric: EmployeeDailyMetrics = {
     employeeId: heartbeat.employeeId,
     date: todayStr,
-    source: "microsoft365",
+    source: "telemetry",
     workingHours: updatedWorkingHours,
     meetingLoad: updatedMeetingLoad,
     breakFrequency: updatedBreakFrequency,
     afterHoursActivity: updatedAfterHours,
   };
 
-  // 3. Persist to storage
-  saveEmployeeMetrics(updatedMetric);
+  // 3. Persist to server store & client storage
+  if (typeof window !== "undefined") {
+    saveEmployeeMetrics(updatedMetric);
+  } else {
+    const userMetrics = serverMetricsStore[heartbeat.employeeId] || [];
+    const idx = userMetrics.findIndex((m) => m.date === todayStr);
+    if (idx >= 0) {
+      userMetrics[idx] = updatedMetric;
+    } else {
+      userMetrics.push(updatedMetric);
+    }
+    serverMetricsStore[heartbeat.employeeId] = userMetrics;
+  }
 
   return {
     todayMetrics: updatedMetric,

@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInUser, signInWithGoogle } from "@/lib/supabase/auth";
+import { signInUser, signInWithGoogle, loginAsLiveTester } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
 import { GoogleLogo } from "@/components/ui/brand-logos";
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
+import { Sparkles, Zap } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,6 +21,12 @@ export default function LoginPage() {
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [googleEmailInput, setGoogleEmailInput] = useState("");
   const [notFoundEmail, setNotFoundEmail] = useState<string | null>(null);
+
+  const handleLiveTesterLogin = () => {
+    setIsLoading(true);
+    loginAsLiveTester();
+    router.push("/dashboard");
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,9 +149,37 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm dark:border-[#383734] dark:bg-[#2c2b28]">
+        <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm dark:border-[#383734] dark:bg-[#2c2b28] space-y-4">
+          
+          {/* Prominent 1-Click Instant Test Access */}
+          <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-indigo-50/60 p-4 dark:border-sky-900/60 dark:from-sky-950/40 dark:to-indigo-950/30 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-sky-900 dark:text-[#60cdff]">
+                <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
+                <span>Instant Access (Zero Login Friction)</span>
+              </div>
+              <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                0 Demo Data
+              </span>
+            </div>
+
+            <p className="text-[11px] leading-4 text-slate-600 dark:text-[#a6a6a6]">
+              Test signal ingestion in real time from integrated apps with a clean 28-day baseline.
+            </p>
+
+            <Button
+              type="button"
+              onClick={handleLiveTesterLogin}
+              disabled={isLoading}
+              className="w-full text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 shadow-sm py-2.5 rounded-xl"
+            >
+              <Sparkles className="mr-1.5 h-3.5 w-3.5 text-amber-400" />
+              Launch Live Testing Workspace
+            </Button>
+          </div>
+
           {error && (
-            <div className="mb-5 space-y-2 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-xs text-amber-900">
+            <div className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-xs text-amber-900">
               <p className="font-semibold">Verification Notice:</p>
               <p>{error}</p>
               {notFoundEmail && (

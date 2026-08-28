@@ -19,6 +19,10 @@ export function getEmployeeMetrics(): EmployeeDailyMetrics[] {
 }
 
 export function saveEmployeeMetrics(metric: EmployeeDailyMetrics) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
   const existing = getEmployeeMetrics();
 
   const updated = existing.some(
@@ -83,3 +87,14 @@ export function clearEmployeeMetrics(employeeId: string): boolean {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
   return true;
 }
+
+/**
+ * System Data Governance: Wipes all demo data across the entire client.
+ */
+export function wipeAllDemoData(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem("wellness-integrations-config");
+  localStorage.removeItem("wellness-registered-users");
+}
+

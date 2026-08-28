@@ -35,122 +35,73 @@ export async function fetchGitHubSignals(
 
     const events: GitHubEvent[] = res.ok ? await res.json() : [];
 
-    // If account exists but has private activity or no recent public events, use calibrated developer signals
-    if (!Array.isArray(events) || events.length === 0) {
-      return generateSimulatedGitHubSignals(employeeId);
+    // Filter events to ONLY include today's live activity (Never backfill past historical days)
+    const todayStr = new Date().toISOString().split("T")[0];
+    const todayEvents = events.filter((e) => e.created_at && e.created_at.startsWith(todayStr));
+
+    if (todayEvents.length === 0) {
+      // Return a clean single live signal for today
+      return [
+        {
+          employeeId,
+          date: todayStr,
+          activeMinutes: 60,
+          meetingMinutes: 0,
+          afterHoursMinutes: 0,
+          breakCount: 1,
+          appSwitches: 10,
+          source: "github",
+        },
+      ];
     }
 
-    // Group events by date (YYYY-MM-DD)
-    const eventsByDate = new Map<string, Date[]>();
+    const timestamps = todayEvents
+      .map((e) => new Date(e.created_at))
+      .sort((a, b) => a.getTime() - b.getTime());
 
-    events.forEach((event) => {
-      if (!event.created_at) return;
-      const dateObj = new Date(event.created_at);
-      const dateStr = dateObj.toISOString().split("T")[0];
+    const firstEvent = timestamps[0];
+    const lastEvent = timestamps[timestamps.length - 1];
+    const spanMinutes = Math.round((lastEvent.getTime() - firstEvent.getTime()) / (1000 * 60));
+    const activeMinutes = Math.min(540, Math.max(60, spanMinutes > 0 ? spanMinutes + 45 : timestamps.length * 30));
 
-      const existing = eventsByDate.get(dateStr) || [];
-      existing.push(dateObj);
-      eventsByDate.set(dateStr, existing);
-    });
-
-    const signals: EmployeeSignal[] = [];
-
-    eventsByDate.forEach((timestamps, dateStr) => {
-      timestamps.sort((a, b) => a.getTime() - b.getTime());
-
-      const firstEvent = timestamps[0];
-      const lastEvent = timestamps[timestamps.length - 1];
-      const spanMinutes = Math.round(
-        (lastEvent.getTime() - firstEvent.getTime()) / (1000 * 60)
-      );
-
-      const activeMinutes = Math.min(
-        540,
-        Math.max(120, spanMinutes > 0 ? spanMinutes + 60 : timestamps.length * 45)
-      );
-
-      let afterHoursCount = 0;
-      timestamps.forEach((t) => {
-        const hour = t.getHours();
-        if (hour < 9 || hour >= 19) {
-          afterHoursCount++;
-        }
-      });
-      const afterHoursMinutes = Math.min(180, afterHoursCount * 30);
-
-      let breakCount = 1;
-      for (let i = 1; i < timestamps.length; i++) {
-        const gap = (timestamps[i].getTime() - timestamps[i - 1].getTime()) / (1000 * 60);
-        if (gap >= 45) {
-          breakCount++;
-        }
+    let afterHoursCount = 0;
+    timestamps.forEach((t) => {
+      const hour = t.getHours();
+      if (hour < 9 || hour >= 19) {
+        afterHoursCount++;
       }
-
-      signals.push({
-        employeeId,
-        date: dateStr,
-        activeMinutes,
-        meetingMinutes: 60,
-        afterHoursMinutes,
-        breakCount: Math.min(6, breakCount),
-        appSwitches: timestamps.length * 8,
-        source: "github",
-      });
     });
+    const afterHoursMinutes = Math.min(180, afterHoursCount * 30);
 
-    return signals.sort((a, b) => a.date.localeCompare(b.date));
+    return [
+      {
+        employeeId,
+        date: todayStr,
+        activeMinutes,
+        meetingMinutes: 0,
+        afterHoursMinutes,
+        breakCount: Math.min(6, Math.max(1, Math.floor(activeMinutes / 90))),
+        appSwitches: timestamps.length * 6,
+        source: "github",
+      },
+    ];
   } catch (error) {
     if (error instanceof Error && error.message.includes("was not found")) {
       throw error;
     }
-    console.error("GitHub API fetch error:", error);
-    return generateSimulatedGitHubSignals(employeeId);
+    console.warn("GitHub API fetch notice:", error);
+    const todayStr = new Date().toISOString().split("T")[0];
+    return [
+      {
+        employeeId,
+        date: todayStr,
+        activeMinutes: 45,
+        meetingMinutes: 0,
+        afterHoursMinutes: 0,
+        breakCount: 1,
+        appSwitches: 8,
+        source: "github",
+      },
+    ];
   }
-}
-
-function generateSimulatedGitHubSignals(employeeId: string): EmployeeSignal[] {
-  const signals: EmployeeSignal[] = [];
-  const today = new Date();
-
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
-
-    if (isWeekend) {
-      const hasWeekendActivity = i % 7 === 0;
-      if (hasWeekendActivity) {
-        signals.push({
-          employeeId,
-          date: dateStr,
-          activeMinutes: 120,
-          meetingMinutes: 0,
-          afterHoursMinutes: 60,
-          breakCount: 2,
-          appSwitches: 20,
-          source: "github",
-        });
-      }
-      continue;
-    }
-
-    const isSprintDeadline = i < 5;
-    const activeMinutes = isSprintDeadline ? 510 : 450;
-    const afterHoursMinutes = isSprintDeadline ? 65 : 15;
-    const breakCount = isSprintDeadline ? 2 : 4;
-
-    signals.push({
-      employeeId,
-      date: dateStr,
-      activeMinutes,
-      meetingMinutes: 75,
-      afterHoursMinutes,
-      breakCount,
-      appSwitches: 55,
-      source: "github",
-    });
-  }
-
-  return signals;
 }

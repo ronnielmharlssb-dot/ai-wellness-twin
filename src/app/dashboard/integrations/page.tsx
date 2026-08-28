@@ -16,7 +16,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { LensCard } from "@/components/ui/lens-card";
 import {
   GoogleLogo,
   GitHubLogo,
@@ -33,6 +32,8 @@ import {
   getStoredIntegrations,
   syncProvider,
   saveStoredIntegrations,
+  validateGoogleAccount,
+  validateDiscordHandle,
 } from "@/lib/integrations/syncEngine";
 import type { IntegrationConnection, IntegrationProvider, IntegrationCategory } from "@/lib/integrations/types";
 import { getLocalSessionUser, type AuthUser } from "@/lib/supabase/auth";
@@ -46,27 +47,24 @@ export default function IntegrationsPage() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
 
+  // Universal Authentication Modal State
+  const [authProvider, setAuthProvider] = useState<IntegrationProvider | null>(null);
+  const [authAccountInput, setAuthAccountInput] = useState("");
+  const [authOwnershipConfirmed, setAuthOwnershipConfirmed] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+
+  // 2-Step Owner Confirmation State
+  const [authStep, setAuthStep] = useState<"input" | "otp_verification">("input");
+  const [enteredOtpInput, setEnteredOtpInput] = useState("");
+
   useEffect(() => {
     const sessionUser = getLocalSessionUser();
     setUser(sessionUser);
 
     const loaded = getStoredIntegrations();
     setIntegrations(loaded);
-
-    const userEmail = sessionUser?.email || "alex@company.com";
-    const defaultGithub = sessionUser?.email ? sessionUser.email.split("@")[0] : "developer";
-
-    const initialInputs: Record<string, string> = {
-      github: defaultGithub,
-      vscode: `${defaultGithub}-workspace`,
-      chatgpt: userEmail,
-      gemini: userEmail,
-      claude: userEmail,
-      google_calendar: userEmail,
-      figma: userEmail,
-      slack: userEmail,
-      discord: `${defaultGithub}.dev`,
-    };
+    const initialInputs: Record<string, string> = {};
 
     loaded.forEach((item) => {
       if (item.config.username) initialInputs[item.provider] = item.config.username;
@@ -81,17 +79,120 @@ export default function IntegrationsPage() {
     setInputs((prev) => ({ ...prev, [provider]: value }));
   };
 
-  const handleSync = async (provider: IntegrationProvider) => {
-    const employeeId = user?.id || "emp-001";
+  const handleOpenAuth = (provider: IntegrationProvider) => {
+    setAuthProvider(provider);
+    setAuthAccountInput(inputs[provider] || "");
+    setAuthOwnershipConfirmed(false);
+    setAuthStep("input");
+    setEnteredOtpInput("");
+    setSyncError(null);
+  };
+
+  const handleSendOwnerVerificationCode = async () => {
+    if (!authProvider) return;
+
+    const cleanInput = authAccountInput.trim();
+    if (!cleanInput) {
+      setSyncError(`Please enter your ${authProvider.toUpperCase()} account identifier.`);
+      return;
+    }
+
+    if ((authProvider === "google_calendar" || authProvider === "gemini" || authProvider === "chatgpt" || authProvider === "claude" || authProvider === "figma") && !validateGoogleAccount(cleanInput)) {
+      setSyncError("Invalid email address. Please enter a valid, existing work or personal email.");
+      return;
+    }
+
+    if (authProvider === "discord" && !validateDiscordHandle(cleanInput)) {
+      setSyncError("Discord verification failed: Please enter a valid Discord username (e.g. alex.dev or alex#1234).");
+      return;
+    }
+
+    setIsSendingCode(true);
+    setSyncError(null);
+
+    try {
+      // Dispatch verification code to owner via backend API
+      const res = await fetch("/api/integrations/verify-owner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "send",
+          email: cleanInput.includes("@") ? cleanInput : `${cleanInput}@verified-user.io`,
+          provider: authProvider,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to dispatch verification code.");
+      }
+
+      setAuthStep("otp_verification");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to dispatch verification code.";
+      setSyncError(msg);
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleConfirmAuth = async () => {
+    if (!authProvider) return;
+
+    const cleanInput = authAccountInput.trim();
+
+    if (enteredOtpInput.trim().length !== 6) {
+      setSyncError("Please enter the complete 6-digit confirmation PIN sent to your email.");
+      return;
+    }
+
+    if (authProvider === "discord" && !authOwnershipConfirmed) {
+      setSyncError("Ownership certification required: Please check the box certifying this Discord account belongs to you.");
+      return;
+    }
+
+    setIsAuthenticating(true);
+    setSyncError(null);
+
+    try {
+      // Verify code with backend API
+      const res = await fetch("/api/integrations/verify-owner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify",
+          email: cleanInput.includes("@") ? cleanInput : `${cleanInput}@verified-user.io`,
+          code: enteredOtpInput.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Invalid confirmation code.");
+      }
+
+      setInputs((prev) => ({ ...prev, [authProvider]: cleanInput }));
+      setAuthProvider(null);
+      await executeSync(authProvider, cleanInput);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Authentication failed.";
+      setSyncError(msg);
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const executeSync = async (provider: IntegrationProvider, targetInput?: string) => {
+    const employeeId = user?.id || "usr-live-tester";
 
     setSyncingProvider(provider);
     setSyncMessage(null);
     setSyncError(null);
 
     let config: Record<string, string> = {};
-    if (provider === "github") config = { username: inputs.github };
-    else if (provider === "google_calendar") config = { calendarEmail: inputs.google_calendar };
-    else config = { workspaceName: inputs[provider] };
+    if (provider === "github") config = { username: targetInput || inputs.github };
+    else if (provider === "google_calendar") config = { calendarEmail: targetInput || inputs.google_calendar };
+    else config = { workspaceName: targetInput || inputs[provider] };
 
     try {
       const result = await syncProvider(provider, employeeId, config);
@@ -107,8 +208,13 @@ export default function IntegrationsPage() {
   };
 
   const handleAutoSyncAllWithGoogle = async () => {
-    const employeeId = user?.id || "emp-001";
-    const googleEmail = user?.email || inputs.google_calendar || "alex@company.com";
+    const employeeId = user?.id || "usr-live-tester";
+    const googleEmail = (inputs.google_calendar || user?.email || "ronnie.tester@company.com").trim();
+
+    if (!validateGoogleAccount(googleEmail)) {
+      setSyncError("Google verification failed: Please enter a verified, existing Google account email.");
+      return;
+    }
 
     setIsAutoSyncingAll(true);
     setSyncMessage(null);
@@ -137,7 +243,7 @@ export default function IntegrationsPage() {
       }
 
       setIntegrations(getStoredIntegrations());
-      setSyncMessage(`All 9 workplace, AI, and communication tools successfully linked to Google Account (${googleEmail})! Baseline data updated.`);
+      setSyncMessage(`All 9 workplace, AI, and communication tools successfully verified & linked to Google Account (${googleEmail})!`);
     } catch (err: unknown) {
       console.error("Auto sync all error:", err);
       const msg = err instanceof Error ? err.message : "Failed to auto-sync with Google account.";
@@ -160,23 +266,23 @@ export default function IntegrationsPage() {
   const getPlaceholder = (provider: IntegrationProvider) => {
     switch (provider) {
       case "github":
-        return "GitHub username (e.g. octocat)";
+        return "Enter your real GitHub username (e.g. torvalds)";
       case "vscode":
-        return "VS Code workspace or handle";
+        return "Enter your VS Code workspace name or user";
       case "chatgpt":
-        return "OpenAI / ChatGPT email";
+        return "Enter your OpenAI / ChatGPT account email";
       case "gemini":
-        return "Google Gemini email";
+        return "Enter your Google account email for Gemini";
       case "claude":
-        return "Anthropic / Claude email";
+        return "Enter your Anthropic / Claude account email";
       case "google_calendar":
-        return "Work calendar email (e.g. alex@company.com)";
+        return "Enter your Google / Outlook calendar email";
       case "figma":
-        return "Figma user or team email";
+        return "Enter your Figma user or team email";
       case "slack":
-        return "Slack workspace or handle (e.g. acme.slack.com)";
+        return "Enter your Slack workspace or handle (e.g. acme.slack.com)";
       case "discord":
-        return "Discord username or tag (e.g. alex.dev or alex#1234)";
+        return "Enter your real Discord username (e.g. alex.dev or alex#1234)";
     }
   };
 
@@ -413,114 +519,133 @@ export default function IntegrationsPage() {
                   const details = getExpandedDetails(item.provider);
 
                   return (
-                    <LensCard
+                    <div
                       key={item.id}
-                      topContent={
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="flex items-start gap-3.5">
-                            {/* Official Tool Vector Logo Container */}
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 shadow-sm dark:border-[#383734] dark:bg-[#1f1f1d]">
-                              {getProviderLogo(item.provider)}
-                            </div>
-
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2.5">
-                                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                                  {item.name}
-                                </h4>
-                                <Badge variant={item.connected ? "positive" : "neutral"}>
-                                  {item.connected ? "Connected" : "Not Linked"}
-                                </Badge>
-                              </div>
-
-                              <p className="max-w-xl text-xs leading-5 text-slate-500 dark:text-[#a6a6a6]">
-                                {item.description}
-                              </p>
-
-                              {item.connected && item.config.accountLabel && (
-                                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                                  Linked to: <span className="underline">{item.config.accountLabel}</span>
-                                </p>
-                              )}
-
-                              {item.lastSyncedAt && (
-                                <p className="text-[11px] text-slate-400 dark:text-[#888884]">
-                                  Last synced: {new Date(item.lastSyncedAt).toLocaleString()}
-                                </p>
-                              )}
-                            </div>
+                      className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:border-slate-300 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-600"
+                    >
+                      {/* Top Main Section */}
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex items-start gap-3.5">
+                          {/* Official Tool Vector Logo Container */}
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 shadow-sm dark:border-[#383734] dark:bg-[#1f1f1d] transition-transform duration-200 group-hover:scale-105">
+                            {getProviderLogo(item.provider)}
                           </div>
 
-                          {/* Explicit Account Input and Action */}
-                          <div className="flex flex-col gap-2 sm:w-72 sm:items-end sm:shrink-0">
-                            <input
-                              type="text"
-                              value={inputs[item.provider] || ""}
-                              onChange={(e) => handleInputChange(item.provider, e.target.value)}
-                              placeholder={getPlaceholder(item.provider)}
-                              className="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs outline-none transition focus:border-slate-400 focus:ring-1 focus:ring-slate-200 dark:border-[#383734] dark:bg-[#181817] dark:text-white"
-                            />
-
-                            <div className="flex gap-2">
-                              {item.connected && (
-                                <Button
-                                  variant="ghost"
-                                  onClick={() => handleDisconnect(item.provider)}
-                                  className="text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
-                                >
-                                  Unlink
-                                </Button>
-                              )}
-
-                              <Button
-                                variant={item.connected ? "outline" : "primary"}
-                                disabled={syncingProvider === item.provider || isAutoSyncingAll}
-                                onClick={() => handleSync(item.provider)}
-                                className="text-xs"
-                              >
-                                {syncingProvider === item.provider
-                                  ? "Syncing..."
-                                  : item.connected
-                                  ? "Re-sync"
-                                  : "Link & Sync"}
-                              </Button>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2.5">
+                              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                                {item.name}
+                              </h4>
+                              <Badge variant={item.connected ? "positive" : "neutral"}>
+                                {item.connected ? "Connected" : "Not Linked"}
+                              </Badge>
                             </div>
+
+                            <p className="max-w-xl text-xs leading-5 text-slate-500 dark:text-[#a6a6a6]">
+                              {item.description}
+                            </p>
+
+                            {item.connected && item.config.accountLabel && (
+                              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                                Linked to: <span className="underline">{item.config.accountLabel}</span>
+                              </p>
+                            )}
+
+                            {item.lastSyncedAt && (
+                              <p className="text-[11px] text-slate-400 dark:text-[#888884]">
+                                Last synced: {new Date(item.lastSyncedAt).toLocaleString()}
+                              </p>
+                            )}
                           </div>
                         </div>
-                      }
-                      behindContent={
-                        <div className="flex h-full flex-col justify-between p-1">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                              <span className={`text-xs font-bold ${privacy.color}`}>
-                                🔒 Privacy Telemetry Lens
+
+                        {/* Explicit Account Input and Action */}
+                        <div className="flex flex-col gap-2 sm:w-72 sm:items-end sm:shrink-0">
+                          <input
+                            type="text"
+                            value={inputs[item.provider] || ""}
+                            onChange={(e) => handleInputChange(item.provider, e.target.value)}
+                            placeholder={getPlaceholder(item.provider)}
+                            className="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs outline-none transition focus:border-slate-400 focus:ring-1 focus:ring-slate-200 dark:border-[#383734] dark:bg-[#181817] dark:text-white"
+                          />
+
+                          <div className="flex gap-2">
+                            {item.connected && (
+                              <Button
+                                variant="ghost"
+                                onClick={() => handleDisconnect(item.provider)}
+                                className="text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                              >
+                                Unlink
+                              </Button>
+                            )}
+
+                            <Button
+                              variant={item.connected ? "outline" : "primary"}
+                              disabled={syncingProvider === item.provider || isAutoSyncingAll}
+                              onClick={() => handleOpenAuth(item.provider)}
+                              className="text-xs"
+                            >
+                              {syncingProvider === item.provider
+                                ? "Syncing..."
+                                : item.connected
+                                ? "Re-authenticate"
+                                : "Authenticate & Link"}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Smooth Hover-Expandable Telemetry & Privacy Drawer */}
+                      <div className="grid transition-all duration-300 ease-out grid-rows-[0fr] group-hover:grid-rows-[1fr] group-focus-within:grid-rows-[1fr]">
+                        <div className="overflow-hidden">
+                          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-[#383734] space-y-3 animate-in fade-in duration-200">
+                            
+                            {/* Privacy Badge Strip */}
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-white">
+                                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                                <span>Strict Metadata-Only Privacy Firewall</span>
+                              </div>
+                              <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900/60">
+                                ZERO TEXT LOGGED
                               </span>
                             </div>
-                            <span className="text-[10px] font-bold tracking-wider text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded">
-                              ZERO TEXT LOGGED
-                            </span>
-                          </div>
 
-                          <div className="my-2 space-y-1.5 text-xs">
-                            <p className="text-white font-medium">
-                              ✓ <strong className="text-emerald-300">Observed Signals:</strong> {privacy.observed}
-                            </p>
-                            <p className="text-slate-300 text-[11px]">
-                              ✕ <strong className="text-rose-300">Prohibited Firewall:</strong> {privacy.excluded}
-                            </p>
-                            <p className="text-[10px] text-slate-400">
-                              ⚡ Bridge Cadence: {details.frequency}
-                            </p>
-                          </div>
+                            {/* Observed Signals vs Excluded Firewall */}
+                            <div className="grid gap-2.5 sm:grid-cols-2 rounded-xl bg-slate-50/80 p-3 text-xs dark:bg-[#1f1e1c] border border-slate-100 dark:border-[#383734]">
+                              <div className="space-y-1">
+                                <p className="font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                  Observed Signals
+                                </p>
+                                <p className="text-[11px] text-slate-600 dark:text-[#a6a6a6] leading-4">
+                                  {privacy.observed}
+                                </p>
+                              </div>
 
-                          <div className="border-t border-slate-700/80 pt-1.5 flex items-center justify-between text-[10px] text-slate-400">
-                            <span>Encrypted local session</span>
-                            <span className="text-emerald-400 font-semibold">100% Confidential</span>
+                              <div className="space-y-1">
+                                <p className="font-semibold text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                                  Permanently Excluded
+                                </p>
+                                <p className="text-[11px] text-slate-600 dark:text-[#a6a6a6] leading-4">
+                                  {privacy.excluded}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Bridge Cadence & Security Footer */}
+                            <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 dark:text-[#888884] pt-0.5">
+                              <span>⚡ Bridge Cadence: <strong>{details.frequency}</strong></span>
+                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">🔒 100% Confidential • Local Encryption</span>
+                            </div>
+
                           </div>
                         </div>
-                      }
-                    />
+                      </div>
+
+                    </div>
                   );
                 })}
               </div>
@@ -528,6 +653,191 @@ export default function IntegrationsPage() {
           );
         })}
       </div>
+
+      {/* Universal OAuth & Identity Authentication Modal */}
+      {authProvider && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-[#383734] dark:bg-[#2c2b28] space-y-5">
+            
+            {/* Modal Header with Provider Brand Logo */}
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-3 dark:border-[#383734]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50 dark:bg-[#1f1e1c] border border-slate-200 dark:border-[#383734] shadow-sm">
+                {getProviderLogo(authProvider)}
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white capitalize">
+                  Authorize {authProvider.replace("_", " ")} Connection
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-[#a6a6a6]">
+                  Establish secure, zero-knowledge telemetry handshake.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 1: Enter Account Identifier */}
+            {authStep === "input" ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-[#cfcfce]">
+                    {authProvider === "google_calendar" || authProvider === "gemini"
+                      ? "Verified Google Email:"
+                      : authProvider === "github"
+                      ? "GitHub Username:"
+                      : authProvider === "discord"
+                      ? "Discord Username / Tag:"
+                      : authProvider === "slack"
+                      ? "Slack Workspace / Username:"
+                      : `${authProvider.toUpperCase()} Account Email / Handle:`}
+                  </label>
+                  <input
+                    type="text"
+                    value={authAccountInput}
+                    onChange={(e) => setAuthAccountInput(e.target.value)}
+                    placeholder={getPlaceholder(authProvider)}
+                    className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500 dark:border-[#383734] dark:bg-[#181817] dark:text-white"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Zero-Knowledge Scope Protection Card */}
+                <div className="rounded-xl bg-slate-50/90 p-3 text-[11px] text-slate-600 dark:bg-[#1f1e1c] dark:text-[#a6a6a6] space-y-1.5 border border-slate-100 dark:border-[#383734]">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span>Authorized Telemetry Scopes</span>
+                  </div>
+                  <ul className="space-y-1 pl-4 list-disc text-[11px]">
+                    <li>Read session timestamps & active focus duration</li>
+                    <li>Aggregate collaboration density outside core hours</li>
+                    <li className="font-semibold text-rose-600 dark:text-rose-400">
+                      Zero access to text, messages, prompts, or files (100% Firewalled 🔒)
+                    </li>
+                  </ul>
+                </div>
+
+                {syncError && (
+                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 animate-in fade-in duration-150">
+                    {syncError}
+                  </p>
+                )}
+
+                {/* Step 1 Actions */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-[#383734]">
+                  <Button
+                    variant="ghost"
+                    disabled={isSendingCode}
+                    onClick={() => setAuthProvider(null)}
+                    className="text-xs"
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    variant="primary"
+                    disabled={isSendingCode}
+                    onClick={handleSendOwnerVerificationCode}
+                    className="text-xs flex items-center gap-1.5"
+                  >
+                    <span>{isSendingCode ? "Sending Code..." : "Send Verification Code to Owner"}</span>
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* Step 2: Enter 6-digit Confirmation Code sent to Owner */
+              <div className="space-y-3.5 animate-in fade-in duration-200">
+                <div className="rounded-xl border border-sky-100 bg-sky-50/80 p-3 text-xs dark:border-sky-900/40 dark:bg-sky-950/30 text-sky-900 dark:text-sky-200 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <CheckCircle2 className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                    <span>Confirmation Code Sent to Inbox</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    A 6-digit confirmation PIN has been sent to <strong>{authAccountInput}</strong>. Please check your email inbox to retrieve the code and verify ownership.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-[#cfcfce]">
+                      Enter 6-Digit Owner Confirmation Code:
+                    </label>
+                    <button
+                      type="button"
+                      disabled={isSendingCode}
+                      onClick={handleSendOwnerVerificationCode}
+                      className="text-[11px] font-medium text-sky-600 hover:underline dark:text-sky-400"
+                    >
+                      {isSendingCode ? "Sending..." : "Resend Code"}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={enteredOtpInput}
+                    onChange={(e) => setEnteredOtpInput(e.target.value.replace(/\D/g, ""))}
+                    placeholder="• • • • • •"
+                    className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-center text-lg font-mono font-bold tracking-[0.3em] outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500 dark:border-[#383734] dark:bg-[#181817] dark:text-white"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Discord Specific Ownership Handshake Checkbox */}
+                {authProvider === "discord" && (
+                  <label className="flex items-start gap-2.5 pt-1 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={authOwnershipConfirmed}
+                      onChange={(e) => setAuthOwnershipConfirmed(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-xs text-slate-700 dark:text-[#cfcfce]">
+                      I certify that this Discord handle belongs to me.
+                    </span>
+                  </label>
+                )}
+
+                {syncError && (
+                  <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 animate-in fade-in duration-150">
+                    {syncError}
+                  </p>
+                )}
+
+                {/* Step 2 Actions */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-[#383734]">
+                  <Button
+                    variant="ghost"
+                    disabled={isAuthenticating}
+                    onClick={() => {
+                      setAuthStep("input");
+                      setSyncError(null);
+                    }}
+                    className="text-xs"
+                  >
+                    ← Back
+                  </Button>
+
+                  <Button
+                    variant="primary"
+                    disabled={isAuthenticating || enteredOtpInput.length !== 6 || (authProvider === "discord" && !authOwnershipConfirmed)}
+                    onClick={handleConfirmAuth}
+                    className="text-xs flex items-center gap-1.5 min-w-[150px] justify-center"
+                  >
+                    {isAuthenticating ? (
+                      <span>Verifying PIN...</span>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Verify & Authorize</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

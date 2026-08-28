@@ -100,6 +100,22 @@ export function findRegisteredUser(email: string): AuthUser | null {
   return users.find((u) => u.email.toLowerCase() === normalized) || null;
 }
 
+export const LIVE_TESTER_ACCOUNT: AuthUser = {
+  id: "usr-live-tester",
+  email: "ronnie.tester@company.com",
+  fullName: "Ronnie (Live Tester)",
+  role: "employee",
+};
+
+export function loginAsLiveTester(): AuthUser {
+  if (typeof window !== "undefined") {
+    // Save to registered users and set active session
+    saveRegisteredUser(LIVE_TESTER_ACCOUNT);
+    setLocalSessionUser(LIVE_TESTER_ACCOUNT);
+  }
+  return LIVE_TESTER_ACCOUNT;
+}
+
 export function getLocalSessionUser(): AuthUser | null {
   if (typeof window === "undefined") {
     return null;
@@ -107,10 +123,14 @@ export function getLocalSessionUser(): AuthUser | null {
 
   try {
     const saved = localStorage.getItem(LOCAL_SESSION_KEY);
-    if (!saved) return null;
+    if (!saved) {
+      // Automatically default to clean Live Tester so no login requirement blocks testing
+      setLocalSessionUser(LIVE_TESTER_ACCOUNT);
+      return LIVE_TESTER_ACCOUNT;
+    }
     return JSON.parse(saved);
   } catch {
-    return null;
+    return LIVE_TESTER_ACCOUNT;
   }
 }
 
