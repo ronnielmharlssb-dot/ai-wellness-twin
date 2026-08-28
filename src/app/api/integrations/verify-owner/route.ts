@@ -40,9 +40,44 @@ export async function POST(req: Request) {
         expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
       });
 
-      // 1. Try sending real live email via Supabase OTP service
+      // 1. Try sending real live email via Resend API if configured
       let realEmailSent = false;
-      if (supabase) {
+      const resendApiKey = process.env.RESEND_API_KEY;
+
+      if (resendApiKey) {
+        try {
+          const resendRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${resendApiKey}`,
+            },
+            body: JSON.stringify({
+              from: "AI Wellness Twin <onboarding@resend.dev>",
+              to: [normalizedEmail],
+              subject: `Your Verification PIN: ${generatedPin}`,
+              html: `
+                <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px;">
+                  <h2 style="color: #0f172a;">AI Wellness Twin Integration</h2>
+                  <p style="color: #475569; font-size: 14px;">Use the following 6-digit confirmation code to verify account ownership:</p>
+                  <div style="background: #f8fafc; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
+                    <span style="font-family: monospace; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0284c7;">${generatedPin}</span>
+                  </div>
+                  <p style="color: #94a3b8; font-size: 12px;">This code expires in 10 minutes. If you did not request this code, please ignore this email.</p>
+                </div>
+              `,
+            }),
+          });
+          if (resendRes.ok) {
+            realEmailSent = true;
+          }
+        } catch (resendErr) {
+          console.warn("Resend API delivery notice:", resendErr);
+        }
+      }
+
+      // 2. Try sending via Supabase OTP service if Resend not sent
+      if (!realEmailSent && supabase) {
         try {
           const { error } = await supabase.auth.signInWithOtp({
             email: normalizedEmail,
