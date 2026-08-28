@@ -8,6 +8,7 @@ import {
   Sparkles,
   Lightbulb,
   FileText,
+  Sliders,
   Layers,
 } from "lucide-react";
 
@@ -46,6 +47,14 @@ export default function DashboardNav() {
         icon={<Lightbulb className="h-4 w-4 shrink-0 transition-transform duration-200" />}
       >
         Recommendations
+      </NavItem>
+
+      <NavItem
+        href="/dashboard/simulator"
+        active={pathname === "/dashboard/simulator"}
+        icon={<Sliders className="h-4 w-4 shrink-0 transition-transform duration-200" />}
+      >
+        Twin Simulator
       </NavItem>
 
       <NavItem

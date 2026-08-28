@@ -10,7 +10,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-import { bootstrapDemoSignals } from "@/lib/signals/bootstrapDemoSignals";
 import {
   buildEmployeeAssessment,
   type EmployeeAssessment,
@@ -23,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScoreGauge } from "@/components/ui/score-gauge";
-import { BaselineProgressTracker } from "@/components/ui/baseline-progress";
+import { BaselineCalibrationSuite } from "@/components/ui/baseline-calibration-suite";
 import { LensCard } from "@/components/ui/lens-card";
 
 export default function DashboardPage() {
@@ -42,12 +41,6 @@ export default function DashboardPage() {
     const employeeId = sessionUser?.id || "emp-001";
     loadUserData(employeeId);
   }, []);
-
-  const handleBootstrapSampleData = () => {
-    const employeeId = user?.id || "emp-001";
-    bootstrapDemoSignals(employeeId);
-    loadUserData(employeeId);
-  };
 
   const isBuilding = assessment?.status === "building";
 
@@ -124,41 +117,14 @@ export default function DashboardPage() {
         </Link>
       </section>
 
-      {/* Baseline Calibration in Progress Banner */}
+      {/* Baseline Calibration in Progress Suite */}
       {isBuilding ? (
-        <Card className="p-6">
-          <div className="space-y-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                    Establishing Your Personal Rhythm
-                  </h2>
-                  <Badge variant="neutral">Calibrating</Badge>
-                </div>
-
-                <p className="mt-1.5 max-w-2xl text-xs leading-5 text-slate-500 dark:text-[#a6a6a6]">
-                  Your twin learns your unique schedule over 28 days so all future reflections compare you only against your own normal patterns.
-                </p>
-              </div>
-
-              <Button
-                variant="outline"
-                onClick={handleBootstrapSampleData}
-                className="shrink-0 text-xs"
-              >
-                Load Sample Data (35 Days)
-              </Button>
-            </div>
-
-            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-[#383734] dark:bg-[#35342e]">
-              <BaselineProgressTracker
-                daysCollected={assessment?.daysCollected ?? 0}
-                requiredDays={assessment?.requiredDays ?? 28}
-              />
-            </div>
-          </div>
-        </Card>
+        <BaselineCalibrationSuite
+          employeeId={user?.id || "emp-001"}
+          daysCollected={assessment?.daysCollected ?? 0}
+          requiredDays={assessment?.requiredDays ?? 28}
+          onMetricsUpdated={() => loadUserData(user?.id || "emp-001")}
+        />
       ) : (
         <>
           {/* Unified Primary Hero Reflection Card */}

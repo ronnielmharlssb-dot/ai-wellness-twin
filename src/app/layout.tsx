@@ -17,6 +17,24 @@ export const metadata: Metadata = {
   title: "Wellness Twin",
   description:
     "A personal wellness companion that helps you understand changes in your work patterns.",
+  icons: {
+    icon: [
+      {
+        url: "/wellness-twin-logo-black.png",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/wellness-twin-logo-transparent.png",
+        media: "(prefers-color-scheme: dark)",
+      },
+      {
+        url: "/favicon.svg",
+        type: "image/svg+xml",
+      },
+    ],
+    shortcut: "/wellness-twin-logo-black.png",
+    apple: "/wellness-twin-logo-black.png",
+  },
 };
 
 const themeInitScript = `
@@ -45,6 +63,9 @@ export default function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="icon" type="image/png" href="/wellness-twin-logo-black.png" media="(prefers-color-scheme: light)" />
+        <link rel="icon" type="image/png" href="/wellness-twin-logo-transparent.png" media="(prefers-color-scheme: dark)" />
       </head>
       <body className="min-h-full flex flex-col bg-[#F7F8FA] text-slate-900 dark:bg-[#20201e] dark:text-[#cfcfce] transition-colors duration-300">
         <ThemeProvider>

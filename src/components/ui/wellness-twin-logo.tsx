@@ -17,17 +17,27 @@ export function WellnessTwinLogo({
 }: LogoProps) {
   return (
     <div className={`inline-flex items-center gap-2.5 ${className}`}>
-      {/* 100% Transparent Standalone Emblem with Light/Dark Adaptive Contrast */}
+      {/* 100% Adaptive Contrast Emblem: Pure Black in Light Mode, Pure White in Dark Mode */}
       <div
         className="relative flex items-center justify-center shrink-0"
         style={{ width: size, height: Math.round(size * 0.72) }}
       >
+        {/* Light Theme: High-Contrast Crisp Black Emblem */}
+        <Image
+          src="/wellness-twin-logo-black.png"
+          alt="AI Wellness Twin Emblem"
+          width={292}
+          height={210}
+          className="h-full w-full object-contain dark:hidden"
+          priority
+        />
+        {/* Dark Theme: High-Contrast Crisp White Emblem */}
         <Image
           src="/wellness-twin-logo-transparent.png"
           alt="AI Wellness Twin Emblem"
           width={292}
           height={210}
-          className="h-full w-full object-contain invert dark:invert-0 transition-all duration-200"
+          className="h-full w-full object-contain hidden dark:block"
           priority
         />
       </div>

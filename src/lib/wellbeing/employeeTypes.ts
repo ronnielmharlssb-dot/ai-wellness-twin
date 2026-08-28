@@ -3,7 +3,7 @@ export type EmployeeDailyMetrics = {
 
   date: string;
 
-  source: "demo" | "microsoft365";
+  source: "demo" | "microsoft365" | "telemetry" | "manual";
 
   workingHours: number;
 

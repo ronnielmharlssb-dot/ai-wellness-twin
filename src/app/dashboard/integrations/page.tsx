@@ -310,38 +310,38 @@ export default function IntegrationsPage() {
     <div className="mx-auto max-w-5xl space-y-8">
       {/* Header */}
       <section>
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-[#9a9893]">
           <Layers className="h-4 w-4" />
           <span>Workplace Signal Connectors</span>
         </div>
 
-        <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
           Connected Tools & AI Assistants
         </h1>
 
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-[#a6a6a6]">
           Link your development tools, AI assistants, and communication channels to calibrate your private behavioral twin.
         </p>
       </section>
 
       {/* 1-Click Google Unified Sync Card */}
-      <Card className="border-slate-300 bg-gradient-to-br from-white via-slate-50 to-indigo-50/30 p-6 shadow-sm">
+      <Card className="border-slate-300 bg-gradient-to-br from-white via-slate-50 to-indigo-50/30 p-6 shadow-sm dark:border-[#383734] dark:from-[#2c2b28] dark:via-[#2c2b28] dark:to-indigo-950/40">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white border border-slate-200 shadow-sm">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white border border-slate-200 shadow-sm dark:bg-[#181817] dark:border-[#383734]">
                 <GoogleLogo className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-slate-900">
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
                   Unified Google Identity Sync
                 </h2>
                 <Badge variant="positive">Single Master Key</Badge>
               </div>
             </div>
 
-            <p className="max-w-xl text-xs leading-5 text-slate-600">
-              Use your Google Account (<strong className="text-slate-900">{user?.email || "alex@company.com"}</strong>) to automatically link and sync Calendar, VS Code, ChatGPT, Gemini, Claude, Figma, Slack, and Discord in **1 click**.
+            <p className="max-w-xl text-xs leading-5 text-slate-600 dark:text-[#cfcfce]">
+              Use your Google Account (<strong className="text-slate-900 dark:text-white">{user?.email || "alex@company.com"}</strong>) to automatically link and sync Calendar, VS Code, ChatGPT, Gemini, Claude, Figma, Slack, and Discord in **1 click**.
             </p>
           </div>
 
@@ -356,11 +356,11 @@ export default function IntegrationsPage() {
       </Card>
 
       {syncMessage && (
-        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
+        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span>
             {syncMessage}{" "}
-            <Link href="/dashboard" className="font-bold underline">
+            <Link href="/dashboard" className="font-bold underline text-emerald-900 dark:text-white">
               View updated Dashboard
             </Link>
           </span>
@@ -368,23 +368,23 @@ export default function IntegrationsPage() {
       )}
 
       {syncError && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-800">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
           ✕ {syncError}
         </div>
       )}
 
       {/* Privacy Guarantee Banner */}
-      <Card className="border-slate-200 bg-slate-50/70 p-6">
+      <Card className="border-slate-200 bg-slate-50/70 p-6 dark:border-[#383734] dark:bg-[#2c2b28]">
         <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white shadow-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white shadow-sm dark:bg-[#181817] dark:border dark:border-[#383734]">
             <ShieldCheck className="h-5 w-5 text-emerald-400" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-slate-900">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
               Strict Metadata-Only Privacy Guarantee
             </h2>
-            <p className="mt-1 text-xs leading-5 text-slate-600">
-              Connectors extract <strong>activity timestamps and durations only</strong>. AI prompt conversations, source code, commit text, calendar event names, and chat messages are <strong>permanently excluded</strong> and never transmitted.
+            <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-[#cfcfce]">
+              Connectors extract <strong className="text-slate-900 dark:text-white">activity timestamps and durations only</strong>. AI prompt conversations, source code, commit text, calendar event names, and chat messages are <strong className="text-slate-900 dark:text-white">permanently excluded</strong> and never transmitted.
             </p>
           </div>
         </div>
@@ -398,10 +398,10 @@ export default function IntegrationsPage() {
 
           return (
             <div key={category} className="space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2 dark:border-[#383734]">
                 <div className="flex items-center gap-2">
                   {getCategoryIcon(category)}
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                     {category}
                   </h3>
                 </div>
