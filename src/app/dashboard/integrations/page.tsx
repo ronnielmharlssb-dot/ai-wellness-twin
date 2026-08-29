@@ -88,13 +88,14 @@ export default function IntegrationsPage() {
         setIntegrations(getStoredIntegrations());
         setSyncMessage(`✓ GitHub account successfully verified and linked as @${verifiedUsername}`);
       } else if (event.data?.type === "GOOGLE_OAUTH_SUCCESS") {
-        const verifiedEmail = event.data?.email || sessionUser?.email || "verified_user@company.com";
-        setInputs((prev) => ({ ...prev, google_calendar: verifiedEmail }));
+        const verifiedEmail = event.data?.email || sessionUser?.email || "verified_user@gmail.com";
+        const targetProvider = (event.data?.provider as IntegrationProvider) || "google_calendar";
+        setInputs((prev) => ({ ...prev, [targetProvider]: verifiedEmail }));
         setAuthProvider(null);
         setSyncError(null);
-        await syncProvider("google_calendar", empId, { calendarEmail: verifiedEmail });
+        await syncProvider(targetProvider, empId, { calendarEmail: verifiedEmail, email: verifiedEmail });
         setIntegrations(getStoredIntegrations());
-        setSyncMessage(`✓ Google Calendar successfully verified and linked as ${verifiedEmail}`);
+        setSyncMessage(`✓ Google account successfully verified and linked as ${verifiedEmail}`);
       } else if (event.data?.type === "SLACK_OAUTH_SUCCESS") {
         const verifiedSlack = event.data?.workspace || sessionUser?.email || "verified_workspace";
         setInputs((prev) => ({ ...prev, slack: verifiedSlack }));
@@ -161,10 +162,11 @@ export default function IntegrationsPage() {
       if (authProvider === "google_calendar" || authProvider === "gemini") {
         const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "689138092583-fp6lg714c06ljm65qf5bl9js51japv79.apps.googleusercontent.com";
         const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/google`);
+        const statePayload = encodeURIComponent(JSON.stringify({ email: targetIdentifier, provider: authProvider }));
 
         let googleAuthUrl = "";
         if (googleClientId) {
-          googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&login_hint=${encodeURIComponent(targetIdentifier)}&prompt=select_account`;
+          googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&login_hint=${encodeURIComponent(targetIdentifier)}&state=${statePayload}&prompt=select_account`;
         } else {
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://rajparqnljoesusikjkx.supabase.co";
           googleAuthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${redirectUri}`;
