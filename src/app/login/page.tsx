@@ -107,27 +107,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickDemoLogin = async (role: "employee" | "hr") => {
-    setIsLoading(true);
-    setError("");
-    setNotFoundEmail(null);
-    const demoEmail = role === "hr" ? "jordan@company.com" : "alex@company.com";
-    const { user } = await signInUser({
-      email: demoEmail,
-      password: "password123",
-      selectedRole: role,
-    });
-
-    if (user) {
-      if (role === "hr") {
-        router.push("/hr");
-      } else {
-        router.push("/dashboard");
-      }
-    }
-    setIsLoading(false);
-  };
-
   return (
     <main className="min-h-screen bg-[#F7F8FA] dark:bg-[#20201e] transition-colors duration-300">
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12">
@@ -269,34 +248,6 @@ export default function LoginPage() {
               {isLoading ? "Verifying..." : "Sign in to Dashboard"}
             </Button>
           </form>
-
-          <div className="my-5 flex items-center gap-4">
-            <div className="h-px flex-1 bg-slate-100" />
-            <span className="text-[11px] font-medium text-slate-400">QUICK DEMO ROLES</span>
-            <div className="h-px flex-1 bg-slate-100" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => handleQuickDemoLogin("employee")}
-              disabled={isLoading}
-              className="text-xs"
-            >
-              Alex (Employee)
-            </Button>
-
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => handleQuickDemoLogin("hr")}
-              disabled={isLoading}
-              className="text-xs"
-            >
-              Jordan (HR)
-            </Button>
-          </div>
         </div>
 
         <div className="mt-6 flex flex-col items-center gap-2 text-center text-xs text-slate-500 dark:text-[#a6a6a6]">
@@ -351,28 +302,6 @@ export default function LoginPage() {
                     placeholder="e.g. alex.morgan@gmail.com"
                     className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
                   />
-                </div>
-
-                <div className="space-y-1.5 pt-1">
-                  <p className="text-[11px] font-semibold text-slate-500">
-                    Pre-registered Google accounts for demo:
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleConfirmGoogleAuth("alex.morgan@gmail.com")}
-                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
-                    >
-                      alex.morgan@gmail.com
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleConfirmGoogleAuth("jordan.hr@gmail.com")}
-                      className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
-                    >
-                      jordan.hr@gmail.com
-                    </button>
-                  </div>
                 </div>
               </div>
 
