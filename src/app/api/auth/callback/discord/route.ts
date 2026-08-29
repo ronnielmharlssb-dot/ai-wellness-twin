@@ -28,6 +28,7 @@ export async function GET(req: Request) {
   const redirectUri = `${url.origin}/api/auth/callback/discord`;
 
   let verifiedUsername = "verified_discord_user";
+  let authError: string | null = null;
 
   if (clientId && clientSecret) {
     try {
@@ -56,11 +57,34 @@ export async function GET(req: Request) {
         if (userRes.ok) {
           const userData = await userRes.json();
           verifiedUsername = userData.username || userData.global_name || verifiedUsername;
+        } else {
+          authError = "Failed to fetch Discord user profile.";
         }
+      } else {
+        const errJson = await tokenRes.json().catch(() => ({}));
+        authError = errJson.error_description || errJson.error || "Discord token exchange failed.";
       }
     } catch (tokenErr) {
-      console.warn("Discord token exchange notice:", tokenErr);
+      authError = tokenErr instanceof Error ? tokenErr.message : "Token exchange network error.";
     }
+  }
+
+  if (authError) {
+    const errorHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head><title>Discord Authorization Error</title></head>
+        <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #0f172a; color: white; text-align: center;">
+          <div style="background: #1e293b; padding: 30px; border-radius: 12px; border: 1px solid #334155; max-width: 420px;">
+            <h2 style="color: #f87171; margin-top: 0;">Discord Link Notice</h2>
+            <p style="font-size: 14px; color: #94a3b8;">${authError}</p>
+            <p style="font-size: 12px; color: #64748b;">Make sure http://localhost:3000/api/auth/callback/discord is added in Discord Developer Portal under OAuth2 Redirects.</p>
+            <button onclick="window.close()" style="background: #5865F2; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px;">Close Window</button>
+          </div>
+        </body>
+      </html>
+    `;
+    return new NextResponse(errorHtml, { headers: { "Content-Type": "text/html" } });
   }
 
   const successHtml = `

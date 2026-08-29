@@ -120,6 +120,7 @@ export default function IntegrationsPage() {
     setAuthProvider(provider);
     const existingVal = inputs[provider] || "";
     setAuthAccountInput(existingVal);
+    setIsAuthenticating(false);
     setSyncError(null);
   };
 
@@ -127,9 +128,10 @@ export default function IntegrationsPage() {
     if (!authProvider) return;
 
     const targetIdentifier = authAccountInput.trim();
+    const isDirectOAuth = authProvider === "discord" || authProvider === "github" || authProvider === "google_calendar" || authProvider === "gemini";
 
-    if (!targetIdentifier) {
-      setSyncError(`Please enter your ${authProvider === "discord" ? "Discord username" : authProvider === "github" ? "GitHub username" : "account email or handle"}.`);
+    if (!targetIdentifier && !isDirectOAuth) {
+      setSyncError("Please enter your account email or workspace handle.");
       return;
     }
 
@@ -169,7 +171,6 @@ export default function IntegrationsPage() {
         }
 
         window.open(googleAuthUrl, "GoogleAuth", "width=500,height=700");
-        setIsAuthenticating(false);
         return;
       }
 
@@ -179,7 +180,6 @@ export default function IntegrationsPage() {
         const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/discord`);
         const oauthUrl = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify&prompt=consent`;
         window.open(oauthUrl, "DiscordAuth", "width=500,height=750");
-        setIsAuthenticating(false);
         return;
       }
 
@@ -787,7 +787,14 @@ export default function IntegrationsPage() {
 
                 <Button
                   variant="primary"
-                  disabled={isAuthenticating || !authAccountInput.trim()}
+                  disabled={
+                    isAuthenticating ||
+                    (!authAccountInput.trim() &&
+                      authProvider !== "discord" &&
+                      authProvider !== "github" &&
+                      authProvider !== "google_calendar" &&
+                      authProvider !== "gemini")
+                  }
                   onClick={handleConfirmOAuth}
                   className={`text-xs flex items-center gap-2 min-w-[180px] justify-center shadow-sm font-semibold ${
                     authProvider === "discord"
