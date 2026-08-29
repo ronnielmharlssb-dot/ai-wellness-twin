@@ -42,13 +42,6 @@ export default function Home() {
             >
               Sign In
             </Link>
-
-            <Link
-              href="/dashboard"
-              className="w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-6 py-3 text-xs font-bold text-slate-700 transition hover:bg-slate-50 shadow-sm dark:border-[#383734] dark:bg-[#2c2b28] dark:text-[#cfcfce] dark:hover:bg-[#353430] dark:hover:text-white"
-            >
-              Preview Demo
-            </Link>
           </div>
 
           <p className="mt-6 text-xs text-slate-400 dark:text-[#888884]">
