@@ -159,7 +159,7 @@ export default function IntegrationsPage() {
 
       // 2. Google OAuth Credential Challenge
       if (authProvider === "google_calendar" || authProvider === "gemini") {
-        const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+        const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "689138092583-fp6lg714c06ljm65qf5bl9js51japv79.apps.googleusercontent.com";
         const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/google`);
 
         let googleAuthUrl = "";
@@ -175,8 +175,8 @@ export default function IntegrationsPage() {
       }
 
       // 3. Discord OAuth Credential Challenge
-      const discordClientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
-      if (authProvider === "discord" && discordClientId) {
+      const discordClientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1542876397973020692";
+      if (authProvider === "discord") {
         const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/discord`);
         const oauthUrl = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify&prompt=consent`;
         window.open(oauthUrl, "DiscordAuth", "width=500,height=750");
@@ -187,11 +187,9 @@ export default function IntegrationsPage() {
 
       // 4. GitHub OAuth Credential Challenge
       if (authProvider === "github") {
-        const githubClientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
+        const githubClientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || "Ov23li0CGTvXkIOMlQze";
         const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/github`);
-        const ghAuthUrl = githubClientId
-          ? `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${redirectUri}&scope=read:user`
-          : `https://github.com/login`;
+        const ghAuthUrl = `https://github.com/login/oauth/authorize?client_id=${githubClientId}&redirect_uri=${redirectUri}&scope=read:user`;
         popupWindow = window.open(ghAuthUrl, "GitHubAuth", "width=500,height=750");
       }
 

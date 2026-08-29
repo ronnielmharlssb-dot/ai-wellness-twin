@@ -23,22 +23,7 @@ export function saveEmployeeMetrics(metric: EmployeeDailyMetrics) {
     return;
   }
 
-  const existing = getEmployeeMetrics();
-
-  const updated = existing.some(
-    (item) =>
-      item.employeeId === metric.employeeId &&
-      item.date === metric.date
-  )
-    ? existing.map((item) =>
-        item.employeeId === metric.employeeId &&
-        item.date === metric.date
-          ? metric
-          : item
-      )
-    : [...existing, metric];
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  saveEmployeeMetricsBatch([metric]);
 }
 
 export function getMetricsForEmployee(
@@ -66,7 +51,22 @@ export function saveEmployeeMetricsBatch(
     );
 
     if (existingIndex >= 0) {
-      updated[existingIndex] = metric;
+      const existing = updated[existingIndex];
+      // Accumulate across multiple tools for the same day (capped at realistic daily bounds)
+      const combinedHours = Number(
+        Math.min(14, Number(existing.workingHours || 0) + Number(metric.workingHours || 0)).toFixed(1)
+      );
+      const combinedMeetings = Math.min(600, (existing.meetingLoad || 0) + (metric.meetingLoad || 0));
+      const combinedBreaks = Math.min(12, (existing.breakFrequency || 0) + (metric.breakFrequency || 0));
+      const combinedAfterHours = Math.min(300, (existing.afterHoursActivity || 0) + (metric.afterHoursActivity || 0));
+
+      updated[existingIndex] = {
+        ...existing,
+        workingHours: combinedHours,
+        meetingLoad: combinedMeetings,
+        breakFrequency: combinedBreaks,
+        afterHoursActivity: combinedAfterHours,
+      };
     } else {
       updated.push(metric);
     }

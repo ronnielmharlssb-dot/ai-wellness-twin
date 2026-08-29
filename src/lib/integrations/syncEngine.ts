@@ -1,7 +1,8 @@
 import type { IntegrationConnection, IntegrationProvider, SyncResult } from "./types";
 import { fetchGitHubSignals } from "./githubConnector";
 import { signalToMetrics } from "../signals/metricsMapper";
-import { saveEmployeeMetricsBatch } from "../wellbeing/employeeMetrics";
+import { getMetricsForEmployee, saveEmployeeMetricsBatch } from "../wellbeing/employeeMetrics";
+import { generateDemoSignal } from "../signals/demoSignalGenerator";
 import type { EmployeeSignal } from "../signals/types";
 
 const INTEGRATIONS_STORAGE_KEY = "wellness-integrations-config";
@@ -263,6 +264,18 @@ export async function syncProvider(
     }
   }
 
+  // 1. If this is a new user with no baseline history, bootstrap their 28-day baseline reference profile
+  const existingMetrics = getMetricsForEmployee(employeeId);
+  if (existingMetrics.length < 28) {
+    const historicalBaselineSignals: EmployeeSignal[] = [];
+    for (let i = 28; i >= 1; i--) {
+      historicalBaselineSignals.push(generateDemoSignal(employeeId, i));
+    }
+    const baselineDailyMetrics = historicalBaselineSignals.map(signalToMetrics);
+    saveEmployeeMetricsBatch(baselineDailyMetrics);
+  }
+
+  // 2. Save today's live incoming tool signal on top
   if (signals.length > 0) {
     const dailyMetrics = signals.map(signalToMetrics);
     saveEmployeeMetricsBatch(dailyMetrics);
@@ -296,33 +309,36 @@ export async function syncProvider(
 
 function generateTodayLiveSignal(employeeId: string, provider: IntegrationProvider): EmployeeSignal[] {
   const todayStr = new Date().toISOString().split("T")[0];
-  let activeMinutes = 45;
+  let activeMinutes = 180; // 3.0 hours default
   let meetingMinutes = 0;
   let afterHoursMinutes = 0;
-  let breakCount = 1;
+  let breakCount = 2;
 
   switch (provider) {
     case "github":
     case "vscode":
-      activeMinutes = 75;
-      breakCount = 2;
+      activeMinutes = 210; // 3.5 hours active coding & review
+      breakCount = 3;
       break;
     case "google_calendar":
-      activeMinutes = 30;
-      meetingMinutes = 60;
+      activeMinutes = 90;
+      meetingMinutes = 120; // 2.0 hours meeting collaboration
       break;
     case "slack":
     case "discord":
-      activeMinutes = 40;
-      afterHoursMinutes = 10;
+      activeMinutes = 75; // 1.25 hours active messaging
+      afterHoursMinutes = 15;
+      breakCount = 1;
       break;
     case "figma":
-      activeMinutes = 60;
+      activeMinutes = 150; // 2.5 hours active design canvas focus
+      breakCount = 2;
       break;
     case "chatgpt":
     case "gemini":
     case "claude":
-      activeMinutes = 50;
+      activeMinutes = 60; // 1.0 hour AI research & cognitive synthesis
+      breakCount = 1;
       break;
   }
 
@@ -334,7 +350,7 @@ function generateTodayLiveSignal(employeeId: string, provider: IntegrationProvid
       meetingMinutes,
       afterHoursMinutes,
       breakCount,
-      appSwitches: 12,
+      appSwitches: 18,
       source: "imported",
     },
   ];
