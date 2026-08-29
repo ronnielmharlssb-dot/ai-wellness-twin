@@ -41,6 +41,7 @@ export async function GET(req: Request) {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "689138092583-fp6lg714c06ljm65qf5bl9js51japv79.apps.googleusercontent.com";
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const redirectUri = `${url.origin}/api/auth/callback/google`;
+  let calendarEvents: Array<{ start: string; end: string }> = [];
 
   if (clientId && clientSecret) {
     try {
@@ -58,12 +59,46 @@ export async function GET(req: Request) {
 
       const tokenData = await tokenRes.json();
       if (tokenData.access_token) {
-        const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-          headers: { Authorization: `Bearer ${tokenData.access_token}` },
-        });
-        const userData = await userInfoRes.json();
-        if (userData.email) {
-          verifiedEmail = userData.email;
+        // 1. Extract verified Google Profile Email
+        try {
+          const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` },
+          });
+          const userData = await userInfoRes.json();
+          if (userData.email) {
+            verifiedEmail = userData.email;
+          }
+        } catch {}
+
+        // 2. Fetch real Google Calendar meeting blocks (Zero-Knowledge: only start & end timestamps)
+        if (targetProvider === "google_calendar") {
+          try {
+            const now = new Date();
+            const past28Days = new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000);
+            const timeMin = past28Days.toISOString();
+            const timeMax = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+
+            const calRes = await fetch(
+              `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime&maxResults=250`,
+              { headers: { Authorization: `Bearer ${tokenData.access_token}` } }
+            );
+
+            if (calRes.ok) {
+              const calData = await calRes.json();
+              if (Array.isArray(calData.items)) {
+                calendarEvents = calData.items
+                  .filter((item: { start?: { dateTime?: string; date?: string }; end?: { dateTime?: string; date?: string } }) =>
+                    Boolean(item.start?.dateTime && item.end?.dateTime)
+                  )
+                  .map((item: { start: { dateTime: string }; end: { dateTime: string } }) => ({
+                    start: item.start.dateTime,
+                    end: item.end.dateTime,
+                  }));
+              }
+            }
+          } catch (calErr) {
+            console.error("Google Calendar event fetch notice:", calErr);
+          }
         }
       }
     } catch (e) {
@@ -96,7 +131,8 @@ export async function GET(req: Request) {
             window.opener.postMessage({
               type: 'GOOGLE_OAUTH_SUCCESS',
               email: '${verifiedEmail}',
-              provider: '${targetProvider}'
+              provider: '${targetProvider}',
+              events: ${JSON.stringify(calendarEvents)}
             }, '*');
           }
           setTimeout(() => {

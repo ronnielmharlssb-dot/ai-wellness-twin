@@ -33,7 +33,6 @@ import {
   syncProvider,
   saveStoredIntegrations,
   validateGoogleAccount,
-  validateDiscordHandle,
 } from "@/lib/integrations/syncEngine";
 import type { IntegrationConnection, IntegrationProvider, IntegrationCategory } from "@/lib/integrations/types";
 import { getLocalSessionUser, type AuthUser } from "@/lib/supabase/auth";
@@ -90,12 +89,22 @@ export default function IntegrationsPage() {
       } else if (event.data?.type === "GOOGLE_OAUTH_SUCCESS") {
         const verifiedEmail = event.data?.email || sessionUser?.email || "verified_user@gmail.com";
         const targetProvider = (event.data?.provider as IntegrationProvider) || "google_calendar";
+        const rawEvents = Array.isArray(event.data?.events) ? event.data.events : [];
         setInputs((prev) => ({ ...prev, [targetProvider]: verifiedEmail }));
         setAuthProvider(null);
         setSyncError(null);
-        await syncProvider(targetProvider, empId, { calendarEmail: verifiedEmail, email: verifiedEmail });
+        await syncProvider(targetProvider, empId, {
+          calendarEmail: verifiedEmail,
+          email: verifiedEmail,
+          calendarEvents: rawEvents,
+        });
         setIntegrations(getStoredIntegrations());
-        setSyncMessage(`✓ Google account successfully verified and linked as ${verifiedEmail}`);
+        const eventCount = rawEvents.length;
+        setSyncMessage(
+          eventCount > 0
+            ? `✓ Google Calendar connected to ${verifiedEmail} — Ingested ${eventCount} real calendar meeting blocks.`
+            : `✓ Google Calendar connected to ${verifiedEmail} — Live telemetry stream active.`
+        );
       } else if (event.data?.type === "SLACK_OAUTH_SUCCESS") {
         const verifiedSlack = event.data?.workspace || sessionUser?.email || "verified_workspace";
         setInputs((prev) => ({ ...prev, slack: verifiedSlack }));
@@ -136,37 +145,23 @@ export default function IntegrationsPage() {
       return;
     }
 
-    if ((authProvider === "google_calendar" || authProvider === "gemini" || authProvider === "chatgpt" || authProvider === "claude" || authProvider === "figma") && !validateGoogleAccount(targetIdentifier)) {
-      setSyncError("Invalid email address. Please enter a valid, existing work or personal email.");
-      return;
-    }
-
-    if (authProvider === "discord" && !validateDiscordHandle(targetIdentifier)) {
-      setSyncError("Discord verification failed: Please enter a valid Discord username (e.g. name or name#1234).");
-      return;
-    }
-
     setIsAuthenticating(true);
     setSyncError(null);
 
     try {
-      // 1. Live existence validation for GitHub
-      if (authProvider === "github") {
-        const ghRes = await fetch(`https://api.github.com/users/${encodeURIComponent(targetIdentifier)}`);
-        if (!ghRes.ok) {
-          throw new Error(`GitHub verification failed: Account "${targetIdentifier}" does not exist on GitHub.`);
-        }
-      }
-
-      // 2. Google OAuth Credential Challenge
+      // 1. Google OAuth Credential Challenge
       if (authProvider === "google_calendar" || authProvider === "gemini") {
         const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "689138092583-fp6lg714c06ljm65qf5bl9js51japv79.apps.googleusercontent.com";
         const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/google`);
         const statePayload = encodeURIComponent(JSON.stringify({ email: targetIdentifier, provider: authProvider }));
+        const scopes =
+          authProvider === "google_calendar"
+            ? "openid%20email%20profile%20https://www.googleapis.com/auth/calendar.events.readonly"
+            : "openid%20email%20profile";
 
         let googleAuthUrl = "";
         if (googleClientId) {
-          googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid%20email%20profile&login_hint=${encodeURIComponent(targetIdentifier)}&state=${statePayload}&prompt=select_account`;
+          googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&access_type=offline&prompt=consent%20select_account&login_hint=${encodeURIComponent(targetIdentifier)}&state=${statePayload}`;
         } else {
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://rajparqnljoesusikjkx.supabase.co";
           googleAuthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${redirectUri}`;

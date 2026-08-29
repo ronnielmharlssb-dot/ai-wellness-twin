@@ -1,5 +1,6 @@
 import type { IntegrationConnection, IntegrationProvider, SyncResult } from "./types";
 import { fetchGitHubSignals } from "./githubConnector";
+import { parseCalendarBlocksToSignals, type CalendarEventBlock } from "./calendarConnector";
 import { signalToMetrics } from "../signals/metricsMapper";
 import { getMetricsForEmployee, saveEmployeeMetricsBatch } from "../wellbeing/employeeMetrics";
 import { generateDemoSignal } from "../signals/demoSignalGenerator";
@@ -224,11 +225,16 @@ export async function syncProvider(
     }
 
     case "google_calendar": {
-      const email = config.calendarEmail?.trim();
+      const email = config.calendarEmail?.trim() || config.email?.trim();
       if (!email || !validateGoogleAccount(email)) {
         throw new Error("Google Account Verification Failed: Please enter a verified, existing Google / Outlook calendar email (e.g. you@company.com).");
       }
-      signals = generateTodayLiveSignal(employeeId, "google_calendar");
+      const rawEvents = (config.calendarEvents as unknown as CalendarEventBlock[]) || [];
+      if (rawEvents.length > 0) {
+        signals = parseCalendarBlocksToSignals(employeeId, rawEvents);
+      } else {
+        signals = generateTodayLiveSignal(employeeId, "google_calendar");
+      }
       connectedAccountLabel = email;
       break;
     }
