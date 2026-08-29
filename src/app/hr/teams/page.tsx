@@ -27,6 +27,15 @@ type Group = {
   eligibleMembers: number;
 };
 
+const DEFAULT_HR_GROUPS: Group[] = [
+  {
+    id: "grp_engineering",
+    name: "Engineering",
+    members: ["team@company.com", "ronnie.tester@company.com"],
+    eligibleMembers: 2,
+  },
+];
+
 export default function TeamsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -37,20 +46,24 @@ export default function TeamsPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState<"employee" | "hr">("employee");
-  const [inviteTeam, setInviteTeam] = useState("Frontend Engineering");
+  const [inviteTeam, setInviteTeam] = useState("Engineering");
   const [generatedInviteUrl, setGeneratedInviteUrl] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   const loadData = () => {
     try {
-      const savedGroups = JSON.parse(localStorage.getItem("hr-groups") || "[]");
-      if (Array.isArray(savedGroups)) {
-        setGroups(savedGroups);
+      const saved = localStorage.getItem("hr-groups");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setGroups(Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_HR_GROUPS);
+      } else {
+        localStorage.setItem("hr-groups", JSON.stringify(DEFAULT_HR_GROUPS));
+        setGroups(DEFAULT_HR_GROUPS);
       }
       setInvitations(getInvitations());
     } catch (error) {
       console.error("Failed to load groups:", error);
-      setGroups([]);
+      setGroups(DEFAULT_HR_GROUPS);
     } finally {
       setIsLoading(false);
     }

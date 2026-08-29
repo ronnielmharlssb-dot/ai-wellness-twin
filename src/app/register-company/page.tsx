@@ -8,11 +8,7 @@ import {
   verifyCompanyDomain,
   isCorporateEmail,
   resendVerificationCode,
-  getOrganizations,
-  saveOrganizations,
-  type Organization,
 } from "@/lib/organizations/organizationManager";
-import { saveRegisteredUser, setLocalSessionUser, type AuthUser } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
 import {
@@ -25,8 +21,6 @@ import {
   CheckCircle2,
   AlertCircle,
   RefreshCw,
-  Sparkles,
-  Zap,
 } from "lucide-react";
 
 export default function RegisterCompanyPage() {
@@ -172,36 +166,6 @@ export default function RegisterCompanyPage() {
     }
   };
 
-  const handleInstantCompanySetup = () => {
-    setIsLoading(true);
-    const orgId = "org_ronnie_enterprise";
-    const newAdminUser: AuthUser = {
-      id: "usr-ronnie-primary",
-      email: "ronnie@company.com",
-      fullName: "Ronnie",
-      role: "hr",
-    };
-    saveRegisteredUser(newAdminUser);
-    setLocalSessionUser(newAdminUser);
-
-    const newOrg: Organization = {
-      id: orgId,
-      name: "Ronnie Enterprise",
-      domain: "company.com",
-      websiteUrl: "https://company.com",
-      registrationNumber: "US-EIN-RONNIE-2026",
-      teamSize: "10-50",
-      industry: "Software & Technology",
-      adminEmail: "ronnie@company.com",
-      adminName: "Ronnie",
-      verificationStatus: "verified",
-      createdAt: new Date().toISOString(),
-      verifiedAt: new Date().toISOString(),
-    };
-    saveOrganizations([newOrg, ...getOrganizations().filter((o) => o.id !== orgId)]);
-    router.push("/hr");
-  };
-
   const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -331,28 +295,6 @@ export default function RegisterCompanyPage() {
         {step === 1 && (
           <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm dark:border-[#383734] dark:bg-[#2c2b28] space-y-6 animate-in fade-in duration-200">
             
-            {/* 1-Click Fast Track / Instant Registration Bypass */}
-            <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-indigo-50/60 p-4 dark:border-sky-900/60 dark:from-sky-950/40 dark:to-indigo-950/30 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="space-y-0.5 text-center sm:text-left">
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold text-sky-900 dark:text-[#60cdff]">
-                  <Sparkles className="h-4 w-4 text-amber-500 fill-amber-500" />
-                  <span>Instant Company Setup (Bypass Requirements)</span>
-                </div>
-                <p className="text-[11px] text-slate-600 dark:text-[#a6a6a6]">
-                  Instantly provision Ronnie Enterprise and open the HR Team Management Portal.
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={handleInstantCompanySetup}
-                disabled={isLoading}
-                className="w-full sm:w-auto text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 shadow-sm py-2.5 px-4 shrink-0 rounded-xl"
-              >
-                <Zap className="h-3.5 w-3.5 mr-1.5 text-amber-400 fill-amber-400" />
-                <span>Instant Activate →</span>
-              </Button>
-            </div>
-
             {error && (
               <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-medium text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
                 {error}
