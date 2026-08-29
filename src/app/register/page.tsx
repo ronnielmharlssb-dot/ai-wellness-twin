@@ -11,7 +11,6 @@ import {
 } from "@/lib/invitations/invitationManager";
 import { signUpUser } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
 import {
   Lock,
@@ -177,13 +176,13 @@ function RegisterContent() {
           </p>
 
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            {invitation ? "Accept Invitation" : "Single-Use Registration"}
+            {invitation ? "Accept Invitation" : "Create Account"}
           </h1>
 
           <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-[#a6a6a6]">
             {invitation
               ? `Confidential behavioral twin for ${invitation.organizationName}`
-              : "Closed corporate tenant • Invitation required"}
+              : "Set up your confidential behavioral twin profile"}
           </p>
         </div>
 
@@ -282,21 +281,21 @@ function RegisterContent() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full text-xs font-bold bg-[#60cdff] text-black hover:bg-[#4cc2ff] py-2.5 rounded-xl shadow-sm"
+                className="w-full text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 py-2.5 rounded-xl shadow-sm"
               >
-                {isLoading ? "Provisioning Twin..." : "Accept Invite & Activate Twin"}
+                {isLoading ? "Activating Profile..." : "Accept Invite & Activate Profile"}
               </Button>
             </form>
           </div>
         )}
 
-        {/* CASE 2: Invalid / Expired / Already Redeemed Token */}
-        {tokenError && (
-          <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm dark:border-[#383734] dark:bg-[#2d2b26] space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="h-6 w-6 shrink-0" />
+        {/* CASE 2: Invalid or Expired Token Notice */}
+        {!invitation && tokenError && (
+          <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm dark:border-[#383734] dark:bg-[#2c2b28] space-y-4 animate-in fade-in duration-200">
+            <div className="flex items-center gap-2.5 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                Invitation Notice
+                Invitation Verification Notice
               </h2>
             </div>
 
@@ -314,16 +313,15 @@ function RegisterContent() {
           </div>
         )}
 
-        {/* CASE 3: Direct Registration / Pure Test Account Creation */}
+        {/* CASE 3: Direct Registration Account Creation */}
         {!invitation && !tokenError && (
           <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm dark:border-[#383734] dark:bg-[#2c2b28] space-y-5 animate-in fade-in duration-200">
             
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-[#383734]">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
                 <UserPlus className="h-4 w-4 text-sky-500" />
-                <span>Create Test Account (Clean 28-Day Baseline)</span>
+                <span>Create New Account</span>
               </div>
-              <Badge variant="neutral">Zero Demo Data</Badge>
             </div>
 
             {formError && (
@@ -343,7 +341,7 @@ function RegisterContent() {
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. John Doe"
+                  placeholder="e.g. Alex Morgan"
                   required
                   className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-1 focus:ring-slate-200 dark:border-[#383734] dark:bg-[#181817] dark:text-white"
                 />
@@ -352,7 +350,7 @@ function RegisterContent() {
               {/* Email */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-700 dark:text-[#cfcfce]">
-                  Work / Test Email
+                  Work Email
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-3.5 w-3.5 text-slate-400" />
@@ -360,7 +358,7 @@ function RegisterContent() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. john@mycompany.com or test@company.com"
+                    placeholder="e.g. alex@company.com"
                     required
                     className="w-full rounded-xl border border-slate-200 py-2.5 pl-8 pr-3 text-xs outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-1 focus:ring-slate-200 dark:border-[#383734] dark:bg-[#181817] dark:text-white"
                   />
@@ -402,7 +400,7 @@ function RegisterContent() {
                 disabled={isLoading}
                 className="w-full text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 py-2.5 rounded-xl shadow-sm"
               >
-                {isLoading ? "Creating Account..." : "Create Account & Start 28-Day Baseline"}
+                {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
 
