@@ -423,7 +423,7 @@ function RegisterContent() {
                 </div>
 
                 <div className="space-y-1.5">
-                  {activeDemoInvites.slice(0, 2).map((inv) => (
+                  {activeDemoInvites.slice(0, 1).map((inv) => (
                     <Link
                       key={inv.id}
                       href={`/register?token=${inv.id}`}

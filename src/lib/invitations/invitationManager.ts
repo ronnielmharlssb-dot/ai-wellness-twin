@@ -33,32 +33,6 @@ export const DEFAULT_INVITATIONS: Invitation[] = [
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
   },
-  {
-    id: "inv_taylor_design_2026",
-    organizationId: "org_acme_technologies",
-    organizationName: "Acme Technologies Inc.",
-    email: "taylor.design@acme.com",
-    fullName: "Taylor Chen",
-    role: "employee",
-    assignedTeam: "Product Design",
-    status: "pending",
-    isUsed: false,
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "inv_jordan_hr_admin_2026",
-    organizationId: "org_acme_technologies",
-    organizationName: "Acme Technologies Inc.",
-    email: "jordan.hr@acme.com",
-    fullName: "Jordan Vance",
-    role: "hr",
-    assignedTeam: "People Operations",
-    status: "pending",
-    isUsed: false,
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
 ];
 
 export function getInvitations(): Invitation[] {
