@@ -12,45 +12,15 @@ const REGISTERED_USERS_KEY = "wellness-registered-users";
 
 const DEFAULT_ACCOUNTS: AuthUser[] = [
   {
-    id: "emp-001",
-    email: "alex@company.com",
-    fullName: "Alex Morgan",
-    role: "employee",
-  },
-  {
-    id: "emp-001-gmail",
-    email: "alex.morgan@gmail.com",
-    fullName: "Alex Morgan",
-    role: "employee",
-  },
-  {
-    id: "hr-001",
-    email: "jordan@company.com",
-    fullName: "Jordan Taylor",
+    id: "usr-ronnie-primary",
+    email: "ronnie@company.com",
+    fullName: "Ronnie",
     role: "hr",
   },
   {
-    id: "hr-001-gmail",
-    email: "jordan.hr@gmail.com",
-    fullName: "Jordan Taylor",
-    role: "hr",
-  },
-  {
-    id: "emp-002",
-    email: "taylor@company.com",
-    fullName: "Taylor Swift",
-    role: "employee",
-  },
-  {
-    id: "emp-003",
-    email: "sam@company.com",
-    fullName: "Sam Wilson",
-    role: "employee",
-  },
-  {
-    id: "emp-004",
-    email: "casey@company.com",
-    fullName: "Casey Brooks",
+    id: "usr-ronnie-tester",
+    email: "ronnie.tester@company.com",
+    fullName: "Ronnie",
     role: "employee",
   },
 ];

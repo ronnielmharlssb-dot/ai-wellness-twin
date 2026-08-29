@@ -21,17 +21,17 @@ const INVITATIONS_STORAGE_KEY = "wellness-tenant-invitations";
 
 export const DEFAULT_INVITATIONS: Invitation[] = [
   {
-    id: "inv_alex_engineering_2026",
-    organizationId: "org_acme_technologies",
-    organizationName: "Acme Technologies Inc.",
-    email: "alex.new@acme.com",
-    fullName: "Alex Rivera",
+    id: "inv_ronnie_team_2026",
+    organizationId: "org_ronnie_enterprise",
+    organizationName: "Ronnie Enterprise",
+    email: "team@company.com",
+    fullName: "Team Member",
     role: "employee",
-    assignedTeam: "Frontend Engineering",
+    assignedTeam: "Engineering",
     status: "pending",
     isUsed: false,
     createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 

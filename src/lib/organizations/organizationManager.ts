@@ -49,18 +49,18 @@ export const FREE_EMAIL_DOMAINS = new Set([
 
 export const DEFAULT_ORGANIZATIONS: Organization[] = [
   {
-    id: "org_acme_technologies",
-    name: "Acme Technologies Inc.",
-    domain: "acme.com",
-    websiteUrl: "https://acme.com",
-    registrationNumber: "US-EIN-9842104",
-    teamSize: "50-200",
+    id: "org_ronnie_enterprise",
+    name: "Ronnie Enterprise",
+    domain: "company.com",
+    websiteUrl: "https://company.com",
+    registrationNumber: "US-EIN-RONNIE-2026",
+    teamSize: "10-50",
     industry: "Software & Technology",
-    adminEmail: "jordan@company.com",
-    adminName: "Jordan Taylor",
+    adminEmail: "ronnie@company.com",
+    adminName: "Ronnie",
     verificationStatus: "verified",
-    createdAt: "2026-08-01T00:00:00.000Z",
-    verifiedAt: "2026-08-01T00:05:00.000Z",
+    createdAt: new Date().toISOString(),
+    verifiedAt: new Date().toISOString(),
   },
 ];
 
@@ -87,38 +87,19 @@ export function saveOrganizations(orgs: Organization[]) {
 }
 
 /**
- * Validates that an email belongs to a legitimate corporate domain
- * rather than a public consumer email provider.
+ * Validates that an email belongs to a domain. Allows all domains for flexible registration.
  */
 export function isCorporateEmail(email: string): { valid: boolean; domain: string; reason?: string } {
   if (!email || !email.includes("@")) {
-    return { valid: false, domain: "", reason: "Invalid email format." };
+    return { valid: false, domain: "", reason: "Please enter a valid email address." };
   }
 
   const parts = email.trim().toLowerCase().split("@");
-  if (parts.length !== 2) {
-    return { valid: false, domain: "", reason: "Invalid email structure." };
+  if (parts.length !== 2 || !parts[1].includes(".")) {
+    return { valid: false, domain: "", reason: "Please enter a valid email domain (e.g. you@company.com)." };
   }
 
   const domain = parts[1];
-
-  if (FREE_EMAIL_DOMAINS.has(domain)) {
-    return {
-      valid: false,
-      domain,
-      reason: `Corporate work email required. Public consumer domains (@${domain}) cannot register an enterprise corporate tenant.`,
-    };
-  }
-
-  // Basic domain syntax check (must have at least one dot and valid characters)
-  if (!domain.includes(".") || domain.length < 4 || domain.startsWith(".") || domain.endsWith(".")) {
-    return {
-      valid: false,
-      domain,
-      reason: `Invalid corporate domain structure (@${domain}).`,
-    };
-  }
-
   return { valid: true, domain };
 }
 
