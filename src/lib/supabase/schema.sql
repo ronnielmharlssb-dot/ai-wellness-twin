@@ -7,7 +7,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null,
   full_name text not null,
-  role text not null check (role in ('employee', 'hr', 'manager')),
+  role text not null check (role in ('employee', 'hr')),
   created_at timestamp with time zone default now()
 );
 
@@ -63,23 +63,23 @@ create table if not exists public.hr_groups (
 -- Enable RLS on hr_groups
 alter table public.hr_groups enable row level security;
 
-create policy "HR and Managers can view groups"
+create policy "HR can view groups"
   on public.hr_groups for select
   using (
     exists (
       select 1 from public.profiles
       where profiles.id = auth.uid()
-      and profiles.role in ('hr', 'manager')
+      and profiles.role = 'hr'
     )
   );
 
-create policy "HR and Managers can manage groups"
+create policy "HR can manage groups"
   on public.hr_groups for all
   using (
     exists (
       select 1 from public.profiles
       where profiles.id = auth.uid()
-      and profiles.role in ('hr', 'manager')
+      and profiles.role = 'hr'
     )
   );
 
@@ -95,23 +95,23 @@ create table if not exists public.hr_group_members (
 -- Enable RLS on hr_group_members
 alter table public.hr_group_members enable row level security;
 
-create policy "HR and Managers can view group memberships"
+create policy "HR can view group memberships"
   on public.hr_group_members for select
   using (
     exists (
       select 1 from public.profiles
       where profiles.id = auth.uid()
-      and profiles.role in ('hr', 'manager')
+      and profiles.role = 'hr'
     )
   );
 
-create policy "HR and Managers can manage group memberships"
+create policy "HR can manage group memberships"
   on public.hr_group_members for all
   using (
     exists (
       select 1 from public.profiles
       where profiles.id = auth.uid()
-      and profiles.role in ('hr', 'manager')
+      and profiles.role = 'hr'
     )
   );
 
@@ -132,13 +132,13 @@ create table if not exists public.hr_group_observations (
 alter table public.hr_group_observations enable row level security;
 
 -- Enforce k-anonymity (>= 3 members) for viewing group observations
-create policy "HR and Managers can view group observations for eligible groups"
+create policy "HR can view group observations for eligible groups"
   on public.hr_group_observations for select
   using (
     exists (
       select 1 from public.profiles
       where profiles.id = auth.uid()
-      and profiles.role in ('hr', 'manager')
+      and profiles.role = 'hr'
     )
     and (
       select count(*) from public.hr_group_members
@@ -146,12 +146,12 @@ create policy "HR and Managers can view group observations for eligible groups"
     ) >= 3
   );
 
-create policy "HR and Managers can insert group observations"
+create policy "HR can insert group observations"
   on public.hr_group_observations for insert
   with check (
     exists (
       select 1 from public.profiles
       where profiles.id = auth.uid()
-      and profiles.role in ('hr', 'manager')
+      and profiles.role = 'hr'
     )
   );

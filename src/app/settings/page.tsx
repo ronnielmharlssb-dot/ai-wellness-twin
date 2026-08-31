@@ -1308,7 +1308,7 @@ export default function SettingsPage() {
 
                   <div className="mt-4 space-y-3 text-xs leading-5 text-slate-600 dark:text-slate-400">
                     <p>
-                      <strong className="text-slate-900 dark:text-slate-200">1. Individual Confidentiality:</strong> Your personal baseline, daily scores, and reflection answers are private to you. They are never displayed on HR or managerial dashboards.
+                      <strong className="text-slate-900 dark:text-slate-200">1. Individual Confidentiality:</strong> Your personal baseline, daily scores, and reflection answers are private to you. They are never displayed on HR portals or dashboards.
                     </p>
                     <p>
                       <strong className="text-slate-900 dark:text-slate-200">2. k-Anonymity Threshold (k ≥ 3):</strong> HR aggregate trends are only calculated for groups with at least 3 eligible members to prevent deducing any individual&apos;s state.

@@ -4,7 +4,7 @@ export type AuthUser = {
   id: string;
   email: string;
   fullName: string;
-  role: "employee" | "hr" | "manager";
+  role: "employee" | "hr";
 };
 
 const LOCAL_SESSION_KEY = "wellness-auth-user";
@@ -17,7 +17,17 @@ export const PRIMARY_USER_ACCOUNT: AuthUser = {
   role: "employee",
 };
 
-const DEFAULT_ACCOUNTS: AuthUser[] = [PRIMARY_USER_ACCOUNT];
+export const PRIMARY_HR_ACCOUNT: AuthUser = {
+  id: "usr-hr-sarah",
+  email: "hr@company.com",
+  fullName: "Sarah Jenkins",
+  role: "hr",
+};
+
+export const DEFAULT_ACCOUNTS: AuthUser[] = [
+  PRIMARY_USER_ACCOUNT,
+  PRIMARY_HR_ACCOUNT,
+];
 
 export function getRegisteredUsers(): AuthUser[] {
   if (typeof window === "undefined") {
@@ -31,7 +41,13 @@ export function getRegisteredUsers(): AuthUser[] {
       return DEFAULT_ACCOUNTS;
     }
     const parsed: AuthUser[] = JSON.parse(saved);
-    return parsed.length > 0 ? parsed : DEFAULT_ACCOUNTS;
+    const merged = Array.isArray(parsed) ? [...parsed] : [];
+    for (const def of DEFAULT_ACCOUNTS) {
+      if (!merged.some((u) => u.email.toLowerCase() === def.email.toLowerCase())) {
+        merged.push(def);
+      }
+    }
+    return merged.length > 0 ? merged : DEFAULT_ACCOUNTS;
   } catch {
     return DEFAULT_ACCOUNTS;
   }
@@ -111,7 +127,7 @@ export async function signUpUser({
   email: string;
   password: string;
   fullName: string;
-  role: "employee" | "hr" | "manager";
+  role: "employee" | "hr";
 }): Promise<{ user: AuthUser | null; error: string | null }> {
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -164,7 +180,7 @@ export async function signInUser({
 }: {
   email: string;
   password?: string;
-  selectedRole?: "employee" | "hr" | "manager";
+  selectedRole?: "employee" | "hr";
 }): Promise<{ user: AuthUser | null; error: string | null }> {
   const normalizedEmail = email.trim().toLowerCase();
 

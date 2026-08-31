@@ -5,7 +5,7 @@ import MobileNav from "./MobileNav";
 import { UserHeaderButton } from "@/components/ui/user-header-button";
 import { LiveTelemetryIndicator } from "@/components/ui/live-telemetry-indicator";
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
-import { Settings, ShieldCheck, Users } from "lucide-react";
+import { Settings, ShieldCheck } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -39,13 +39,6 @@ export default function DashboardLayout({
             </div>
 
             <div className="mt-auto border-t border-slate-100 pt-4 dark:border-[#383734] space-y-1">
-              <Link
-                href="/hr"
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 dark:text-[#a6a6a6] dark:hover:bg-[#353430] dark:hover:text-white"
-              >
-                <Users className="h-4 w-4 text-slate-400 dark:text-[#9a9893]" />
-                <span>HR Workforce View</span>
-              </Link>
               <Link
                 href="/settings"
                 className="flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 dark:text-[#a6a6a6] dark:hover:bg-[#353430] dark:hover:text-white"

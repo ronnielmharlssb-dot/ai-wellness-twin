@@ -152,10 +152,52 @@ export default function LoginPage() {
             Continue with Google
           </Button>
 
-          <div className="my-6 flex items-center gap-4">
-            <div className="h-px flex-1 bg-slate-100" />
+          {/* Quick Demo Test Accounts */}
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3 dark:border-[#383734] dark:bg-[#20201e]/60">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2">
+              🧪 Quick Demo Accounts:
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("ronnie@company.com");
+                  setPassword("password123");
+                  setError("");
+                }}
+                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                  👤 Employee
+                </span>
+                <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
+                  ronnie@company.com
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("hr@company.com");
+                  setPassword("password123");
+                  setError("");
+                }}
+                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  🛡️ HR Admin
+                </span>
+                <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
+                  hr@company.com
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div className="my-4 flex items-center gap-4">
+            <div className="h-px flex-1 bg-slate-100 dark:bg-[#383734]" />
             <span className="text-xs font-medium text-slate-400">OR WITH EMAIL</span>
-            <div className="h-px flex-1 bg-slate-100" />
+            <div className="h-px flex-1 bg-slate-100 dark:bg-[#383734]" />
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">

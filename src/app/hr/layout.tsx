@@ -2,25 +2,52 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import HRNav from "./HRNav";
 import { UserHeaderButton } from "@/components/ui/user-header-button";
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
 import { Settings, ShieldCheck, Building2, LayoutDashboard } from "lucide-react";
 import { getOrganizations, type Organization } from "@/lib/organizations/organizationManager";
+import { getLocalSessionUser } from "@/lib/supabase/auth";
 
 export default function HRLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
 
   useEffect(() => {
+    const user = getLocalSessionUser();
+    if (!user) {
+      setIsAuthorized(false);
+      router.replace("/login");
+      return;
+    }
+    if (user.role !== "hr") {
+      setIsAuthorized(false);
+      router.replace("/dashboard");
+      return;
+    }
+    setIsAuthorized(true);
     const orgs = getOrganizations();
     if (orgs.length > 0) {
       setActiveOrg(orgs[0]);
     }
-  }, []);
+  }, [router]);
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f8fa] dark:bg-[#20201e]">
+        <div className="flex flex-col items-center gap-3">
+          <WellnessTwinLogo size={40} />
+          <p className="text-xs font-semibold text-slate-400">Verifying HR authorization...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#20201e] transition-colors duration-300">
