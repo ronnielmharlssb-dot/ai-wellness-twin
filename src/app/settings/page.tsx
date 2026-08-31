@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
   User,
@@ -18,11 +19,9 @@ import {
   Laptop,
   CheckCircle2,
   Clock,
-  Calendar,
   Layers,
   Save,
   LogOut,
-  Sliders,
   ChevronRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +78,7 @@ const DEFAULT_MEMBERS: RegisteredMember[] = [
 const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [settings, setSettings] = useState<UserSettingsState>(getUserSettings());
@@ -564,7 +564,7 @@ export default function SettingsPage() {
                       variant="outline"
                       onClick={async () => {
                         await signOutUser();
-                        window.location.href = "/login";
+                        router.push("/login");
                       }}
                       className="flex items-center gap-2 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 shrink-0"
                     >

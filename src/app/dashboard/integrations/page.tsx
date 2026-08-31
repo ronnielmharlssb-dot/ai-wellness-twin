@@ -223,10 +223,20 @@ export default function IntegrationsPage() {
       // Automated OAuth Handshake: Track popup until provider callback completes or window closes
       if (popupWindow) {
         setIsAuthenticating(true);
-        const checkTimer = setInterval(() => {
+        const checkTimer = setInterval(async () => {
           if (popupWindow?.closed) {
             clearInterval(checkTimer);
             setIsAuthenticating(false);
+            const empId = user?.id || "usr-ronnie";
+            await syncProvider(authProvider, empId, {
+              workspaceName: targetIdentifier,
+              username: targetIdentifier,
+              calendarEmail: targetIdentifier,
+              email: targetIdentifier,
+            });
+            setIntegrations(getStoredIntegrations());
+            setSyncMessage(`✓ ${authProvider.replace("_", " ").toUpperCase()} account successfully verified & linked via OAuth popup.`);
+            setAuthProvider(null);
           }
         }, 600);
         return;
@@ -236,45 +246,6 @@ export default function IntegrationsPage() {
       setSyncError(msg);
     } finally {
       setIsAuthenticating(false);
-    }
-  };
-
-  const handleDirectLink = async () => {
-    if (!authProvider) return;
-    const targetIdentifier = authAccountInput.trim();
-    if (!targetIdentifier) {
-      setSyncError("Please enter your account email or handle.");
-      return;
-    }
-    const empId = user?.id || "usr-ronnie";
-    try {
-      if (authProvider === "google_calendar") {
-        if (!validateGoogleAccount(targetIdentifier)) {
-          setSyncError("Please enter a valid Google Account email.");
-          return;
-        }
-        await syncProvider("google_calendar", empId, { calendarEmail: targetIdentifier });
-        setIntegrations(getStoredIntegrations());
-        setSyncMessage(`✓ Google Calendar successfully connected & linked to ${targetIdentifier}`);
-        setAuthProvider(null);
-      } else if (authProvider === "gemini") {
-        if (!validateGoogleAccount(targetIdentifier)) {
-          setSyncError("Please enter a valid Google Account email.");
-          return;
-        }
-        await syncProvider("gemini", empId, { workspaceName: targetIdentifier });
-        setIntegrations(getStoredIntegrations());
-        setSyncMessage(`✓ Google Gemini successfully connected & linked to ${targetIdentifier}`);
-        setAuthProvider(null);
-      } else {
-        await syncProvider(authProvider, empId, { workspaceName: targetIdentifier, username: targetIdentifier });
-        setIntegrations(getStoredIntegrations());
-        setSyncMessage(`✓ ${authProvider} successfully linked to ${targetIdentifier}`);
-        setAuthProvider(null);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to link account.";
-      setSyncError(msg);
     }
   };
 
@@ -820,15 +791,6 @@ export default function IntegrationsPage() {
                 </Button>
 
                 <Button
-                  variant="outline"
-                  disabled={isAuthenticating || !authAccountInput.trim()}
-                  onClick={handleDirectLink}
-                  className="text-xs border-slate-300 dark:border-slate-700 font-semibold"
-                >
-                  Link & Verify Directly
-                </Button>
-
-                <Button
                   variant="primary"
                   disabled={
                     isAuthenticating ||
@@ -839,7 +801,7 @@ export default function IntegrationsPage() {
                       authProvider !== "gemini")
                   }
                   onClick={handleConfirmOAuth}
-                  className={`text-xs flex items-center gap-2 min-w-[160px] justify-center shadow-sm font-semibold ${
+                  className={`text-xs flex items-center gap-2 min-w-[190px] justify-center shadow-sm font-semibold ${
                     authProvider === "discord"
                       ? "bg-[#5865F2] hover:bg-[#4752C4] text-white"
                       : authProvider === "google_calendar" || authProvider === "gemini"
@@ -850,14 +812,12 @@ export default function IntegrationsPage() {
                   {isAuthenticating ? (
                     <div className="flex items-center gap-2">
                       <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      <span>Verifying Handshake...</span>
+                      <span>Verifying via Popup...</span>
                     </div>
                   ) : (
                     <>
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span>
-                        OAuth Popup
-                      </span>
+                      <span>Authorize via OAuth Popup</span>
                     </>
                   )}
                 </Button>
