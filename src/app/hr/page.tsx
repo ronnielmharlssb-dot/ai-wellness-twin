@@ -128,20 +128,40 @@ export default function HRDashboardPage() {
   const hasEligible = summary && summary.eligibleGroups > 0;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
-      <section>
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Workforce Overview
-        </p>
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* Header & Breadcrumb */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 dark:text-[#9a9893]">
+            <Link href="/hr" className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+              Workforce Portal
+            </Link>
+            <span>›</span>
+            <span className="text-slate-700 dark:text-slate-200">Overview</span>
+          </div>
 
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          Organizational Wellbeing
-        </h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            Organizational Wellbeing
+          </h1>
 
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-          Aggregate, privacy-protected wellbeing patterns across eligible organization groups.
-        </p>
-      </section>
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#a6a6a6] max-w-2xl">
+            High-level overview of team wellbeing trends based on aggregate, anonymized patterns ($k \ge 3$).
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Link href="/hr/teams">
+            <Button variant="outline" className="text-xs border-slate-200 dark:border-[#383734]">
+              Manage Teams
+            </Button>
+          </Link>
+          <Link href="/hr/teams/create">
+            <Button className="text-xs">
+              + Create Team
+            </Button>
+          </Link>
+        </div>
+      </div>
 
       {!hasGroups ? (
         <Card className="p-8">

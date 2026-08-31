@@ -456,22 +456,33 @@ export default function IntegrationsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      {/* Header */}
-      <section>
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-[#9a9893]">
-          <Layers className="h-4 w-4" />
-          <span>Workplace Signal Connectors</span>
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* Header & Breadcrumb */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 dark:text-[#9a9893]">
+            <Link href="/dashboard" className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+              Dashboard
+            </Link>
+            <span>›</span>
+            <span className="text-slate-700 dark:text-slate-200">Integrations</span>
+          </div>
+
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            Connected Tools & AI Assistants
+          </h1>
+
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#a6a6a6] max-w-2xl">
+            Link your development tools, AI assistants, and communication channels to calibrate your private behavioral twin.
+          </p>
         </div>
 
-        <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-          Connected Tools & AI Assistants
-        </h1>
-
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-[#a6a6a6]">
-          Link your development tools, AI assistants, and communication channels to calibrate your private behavioral twin.
-        </p>
-      </section>
+        <Link href="/dashboard">
+          <Button variant="outline" className="text-xs shrink-0 border-slate-200 dark:border-[#383734]">
+            ← Back to Dashboard
+          </Button>
+        </Link>
+      </div>
 
       {/* 1-Click Google Unified Sync Card */}
       <Card className="border-slate-300 bg-gradient-to-br from-white via-slate-50 to-indigo-50/30 p-6 shadow-sm dark:border-[#383734] dark:from-[#2c2b28] dark:via-[#2c2b28] dark:to-indigo-950/40">

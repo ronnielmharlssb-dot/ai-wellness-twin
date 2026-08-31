@@ -223,7 +223,33 @@ export default function ReportsPage() {
   const isBuilding = assessment?.status === "building";
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* Header & Breadcrumb */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 dark:text-[#9a9893]">
+            <Link href="/dashboard" className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+              Dashboard
+            </Link>
+            <span>›</span>
+            <span className="text-slate-700 dark:text-slate-200">Weekly Reports</span>
+          </div>
+
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            Personal Weekly Reports
+          </h1>
+
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#a6a6a6] max-w-2xl">
+            Friday end-of-week reflection, weekly behavioral shift retrospective, and PDF summary export.
+          </p>
+        </div>
+
+        <Link href="/dashboard">
+          <Button variant="outline" className="text-xs shrink-0 border-slate-200 dark:border-[#383734]">
+            ← Back to Dashboard
+          </Button>
+        </Link>
+      </div>
       
       {/* Simulation Sandbox Control for Evaluators */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 text-xs dark:border-[#383734] dark:bg-[#2c2b28] shadow-sm">
@@ -241,7 +267,7 @@ export default function ReportsPage() {
           <Button
             variant="outline"
             onClick={() => setSimulateFriday(!simulateFriday)}
-            className="text-[11px] py-1 px-2.5"
+            className="text-[11px] py-1 px-2.5 border-slate-200 dark:border-[#383734]"
           >
             {simulateFriday ? "Switch to Regular Weekday" : "Simulate Friday Trigger"}
           </Button>

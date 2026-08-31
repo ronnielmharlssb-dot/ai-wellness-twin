@@ -100,48 +100,48 @@ export default function TeamsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
-      
-      {/* Header */}
-      <section>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              <Users className="h-4 w-4" />
-              <span>Workforce Groups & Roster</span>
-            </div>
-
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-              Teams & Onboarding
-            </h1>
-
-            <p className="mt-1 text-sm text-slate-500 dark:text-[#a6a6a6]">
-              Manage department group boundaries ($k \ge 3$) and issue single-use employee invitation links.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => {
-                setShowInviteModal(true);
-                setGeneratedInviteUrl(null);
-                setInviteEmail("");
-                setInviteName("");
-              }}
-              className="flex items-center gap-2 text-xs bg-[#60cdff] text-black font-bold hover:bg-[#4cc2ff]"
-            >
-              <UserPlus className="h-4 w-4" />
-              <span>Invite Employee</span>
-            </Button>
-
-            <Link href="/hr/teams/create">
-              <Button variant="outline" className="text-xs">
-                Create Group
-              </Button>
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* Header & Breadcrumb */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 dark:text-[#9a9893]">
+            <Link href="/hr" className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+              Workforce Portal
             </Link>
+            <span>›</span>
+            <span className="text-slate-700 dark:text-slate-200">Teams & Onboarding</span>
           </div>
+
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            Teams & Onboarding
+          </h1>
+
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#a6a6a6] max-w-2xl">
+            Manage department group boundaries ($k \ge 3$) and issue single-use employee invitation links.
+          </p>
         </div>
-      </section>
+
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => {
+              setShowInviteModal(true);
+              setGeneratedInviteUrl(null);
+              setInviteEmail("");
+              setInviteName("");
+            }}
+            className="flex items-center gap-2 text-xs bg-[#60cdff] text-black font-bold hover:bg-[#4cc2ff]"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Invite Employee</span>
+          </Button>
+
+          <Link href="/hr/teams/create">
+            <Button variant="outline" className="text-xs border-slate-200 dark:border-[#383734]">
+              Create Group
+            </Button>
+          </Link>
+        </div>
+      </div>
 
       {/* Invite Employee Modal */}
       {showInviteModal && (
