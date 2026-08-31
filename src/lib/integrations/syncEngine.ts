@@ -52,9 +52,10 @@ export const DEFAULT_INTEGRATIONS: IntegrationConnection[] = [
     name: "Google Gemini",
     category: "AI Assistants & Research",
     description: "Observes Gemini research & analysis session windows to track workflow augmentation and focus intensity.",
-    connected: false,
+    connected: true,
     config: {
-      workspaceName: "",
+      workspaceName: "Gemini 3.7 Flash Assistant",
+      accountLabel: "Google Gemini AI Active",
     },
   },
   {
