@@ -4,6 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, TrendingUp } from "lucide-react";
 
+interface HRNavProps {
+  collapsed?: boolean;
+}
+
 const navItems = [
   {
     href: "/hr",
@@ -22,11 +26,11 @@ const navItems = [
   },
 ];
 
-export default function HRNav() {
+export default function HRNav({ collapsed = false }: HRNavProps) {
   const pathname = usePathname();
 
   return (
-    <nav className="space-y-0.5">
+    <nav className="space-y-1">
       {navItems.map((item) => {
         const active =
           pathname === item.href ||
@@ -36,16 +40,21 @@ export default function HRNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150 ease-out ${
+            title={collapsed ? item.label : undefined}
+            className={`relative flex items-center rounded-lg text-xs font-medium transition-all duration-150 ease-out ${
+              collapsed
+                ? "h-10 w-10 justify-center mx-auto"
+                : "gap-3 px-3 py-2"
+            } ${
               active
-                ? "bg-slate-100 text-slate-900 font-semibold dark:bg-white/[0.07] dark:text-white before:content-[''] before:absolute before:left-0 before:top-[22%] before:h-[56%] before:w-[3.5px] before:rounded-r-full before:bg-[#60cdff]"
+                ? "bg-slate-100 text-slate-900 font-semibold dark:bg-white/[0.07] dark:text-white"
                 : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-[#cfcfce] dark:hover:bg-white/[0.04] dark:hover:text-white"
             }`}
           >
-            <span className="flex h-5 w-5 items-center justify-center">
+            <span className="flex h-5 w-5 items-center justify-center shrink-0">
               {item.icon}
             </span>
-            <span>{item.label}</span>
+            {!collapsed && <span className="truncate">{item.label}</span>}
           </Link>
         );
       })}
