@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import HRNav from "./HRNav";
 import { UserHeaderButton } from "@/components/ui/user-header-button";
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
-import { Settings, ShieldCheck, Building2, LayoutDashboard } from "lucide-react";
+import { Settings, ShieldCheck, Building2 } from "lucide-react";
 import { getOrganizations, type Organization } from "@/lib/organizations/organizationManager";
 import { getLocalSessionUser } from "@/lib/supabase/auth";
 
@@ -92,13 +92,6 @@ export default function HRLayout({
             </div>
 
             <div className="mt-auto border-t border-slate-100 pt-4 dark:border-[#383734] space-y-1">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 dark:text-[#a6a6a6] dark:hover:bg-[#353430] dark:hover:text-white"
-              >
-                <LayoutDashboard className="h-4 w-4 text-slate-400 dark:text-[#9a9893]" />
-                <span>Employee Dashboard</span>
-              </Link>
               <Link
                 href="/settings"
                 className="flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 dark:text-[#a6a6a6] dark:hover:bg-[#353430] dark:hover:text-white"

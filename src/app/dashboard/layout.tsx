@@ -1,17 +1,49 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import DashboardNav from "./DashboardNav";
 import MobileNav from "./MobileNav";
 import { UserHeaderButton } from "@/components/ui/user-header-button";
 import { LiveTelemetryIndicator } from "@/components/ui/live-telemetry-indicator";
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
 import { Settings, ShieldCheck } from "lucide-react";
+import { getLocalSessionUser } from "@/lib/supabase/auth";
 
 export default function DashboardLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const user = getLocalSessionUser();
+    if (!user) {
+      setIsAuthorized(false);
+      router.replace("/login");
+      return;
+    }
+    if (user.role === "hr") {
+      setIsAuthorized(false);
+      router.replace("/hr");
+      return;
+    }
+    setIsAuthorized(true);
+  }, [router]);
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f8fa] dark:bg-[#20201e]">
+        <div className="flex flex-col items-center gap-3">
+          <WellnessTwinLogo size={40} />
+          <p className="text-xs font-semibold text-slate-400">Loading your wellness twin...</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#20201e] transition-colors duration-300">
       <div className="flex min-h-screen">
