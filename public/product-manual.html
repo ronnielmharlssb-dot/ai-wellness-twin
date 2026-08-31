@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Wellness Twin — Product & Operations Manual</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background: white !important;
+        color: black !important;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      .card-shadow {
+        box-shadow: none !important;
+        border: 1px solid #e2e8f0 !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased selection:bg-sky-100 selection:text-sky-900">
+
+  <!-- Fixed Top Bar (Interactive / Print Button) -->
+  <header class="no-print sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-md px-6 py-3.5 shadow-sm">
+    <div class="mx-auto flex max-w-5xl items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img src="/wellness-twin-logo-black.png" alt="AI Wellness Twin Logo" class="h-8 w-auto">
+        <div>
+          <span class="text-sm font-bold tracking-tight text-slate-900">AI Wellness Twin</span>
+          <span class="ml-2 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">Product Manual v1.0</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a href="https://ai-wellness-twin.vercel.app" target="_blank" class="rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+          Open Live App ↗
+        </a>
+        <button onclick="window.print()" class="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-slate-800 active:scale-95">
+          <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          <span>Save as PDF / Print</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Document Container -->
+  <main class="mx-auto max-w-5xl px-6 py-12">
+
+    <!-- Document Cover Section -->
+    <div class="mb-14 rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6 border-b border-slate-100 pb-8">
+        <div>
+          <span class="inline-flex items-center gap-1.5 rounded-lg bg-sky-50 border border-sky-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-sky-700">
+            Official System Documentation
+          </span>
+          <h1 class="mt-4 text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">
+            AI Wellness Twin
+          </h1>
+          <p class="mt-2 text-lg text-slate-600">
+            Product Specification, Architecture & Operations Manual
+          </p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-xs text-slate-600 space-y-1.5 min-w-[240px]">
+          <div><strong class="text-slate-900">Version:</strong> 1.0 (Production MVP)</div>
+          <div><strong class="text-slate-900">Release Date:</strong> August 2026</div>
+          <div><strong class="text-slate-900">Live Production:</strong> <a href="https://ai-wellness-twin.vercel.app" class="text-sky-600 underline font-mono">ai-wellness-twin.vercel.app</a></div>
+          <div><strong class="text-slate-900">Classification:</strong> Open Submission / Hackathon MVP</div>
+        </div>
+      </div>
+
+      <!-- Quick Executive Summary Metrics -->
+      <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Supported Apps</div>
+          <div class="mt-1 text-2xl font-black text-slate-900">9 Tools</div>
+          <div class="mt-0.5 text-[11px] text-slate-500">GitHub, VS Code, Slack, Calendar...</div>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Privacy Standard</div>
+          <div class="mt-1 text-2xl font-black text-emerald-600">k ≥ 3</div>
+          <div class="mt-0.5 text-[11px] text-slate-500">Strict k-Anonymity Threshold</div>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Baseline Calibration</div>
+          <div class="mt-1 text-2xl font-black text-sky-600">28 Days</div>
+          <div class="mt-0.5 text-[11px] text-slate-500">Adaptive Personal Rhythm</div>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Content Logging</div>
+          <div class="mt-1 text-2xl font-black text-slate-900">0%</div>
+          <div class="mt-0.5 text-[11px] text-slate-500">Zero Keystroke / Prompt Logging</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 1: Executive Summary -->
+    <section class="mb-12 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+      <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white">1</span>
+        Executive Summary
+      </h2>
+      
+      <p class="mt-4 text-sm leading-7 text-slate-600">
+        Knowledge workers in software engineering, design, and product development frequently suffer from invisible burnout. The modern workday is fragmented into overlapping video meetings, asynchronous chat interruptions, after-hours pull request reviews, and cognitive exhaustion. Conventional corporate wellness approaches rely on retrospective surveys filled out months after an employee has already burned out.
+      </p>
+      
+      <p class="mt-3 text-sm leading-7 text-slate-600">
+        <strong>AI Wellness Twin</strong> resolves this dilemma by constructing a <em>non-invasive, proactive digital twin</em> of an individual worker's daily rhythms. By continuously synthesizing passive metadata timestamps (from tools like Visual Studio Code, GitHub, and Google Calendar) with active subjective pulse surveys (MBI-GS Maslach Burnout Inventory), the system alerts the employee to negative boundary erosion and provides actionable, simulated interventions before burnout occurs.
+      </p>
+    </section>
+
+    <!-- Section 2: Core Concept & Architecture -->
+    <section class="mb-12 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+      <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white">2</span>
+        System Architecture & Role Isolation
+      </h2>
+
+      <div class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 p-6 text-slate-100 text-xs font-mono">
+        <pre>
++-------------------------------------------------------------------------+
+|                        AI WELLNESS TWIN SYSTEM                          |
++-------------------------------------------------------------------------+
+                                     |
+           +-------------------------+-------------------------+
+           |                                                   |
+           v                                                   v
++------------------------+                           +--------------------+
+|    PASSIVE SIGNALS     |                           |   ACTIVE SIGNALS   |
+| * IDE Focus (VS Code)  |                           | * MBI-GS Inventory |
+| * Commits (GitHub)     |                           | * Energy & Sleep   |
+| * Meetings (Calendar)  |                           | * Daily Check-in   |
++-----------+------------+                           +---------+----------+
+            |                                                  |
+            +------------------------+-------------------------+
+                                     |
+                                     v
+                  +--------------------------------------+
+                  |      28-DAY ADAPTIVE BASELINE        |
+                  |     (Non-Comparative Personal Twin)  |
+                  +------------------+-------------------+
+                                     |
+           +-------------------------+-------------------------+
+           |                                                   |
+           v                                                   v
++------------------------+                           +--------------------+
+|   EMPLOYEE PORTAL      |                           |     HR COCKPIT     |
+|      (/dashboard)      |                           |       (/hr)        |
+| * Twin Health Score    |                           | * k >= 3 Radar     |
+| * What-If Simulator    |                           | * Org Trends       |
+| * 9-App Signals Grid   |                           | * Invite Generator |
++------------------------+                           +--------------------+
+        </pre>
+      </div>
+
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-5">
+          <div class="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-xs text-sky-800 font-bold">👤</span>
+            Employee Role Portal (<code class="text-xs bg-slate-200 px-1 py-0.5 rounded">/dashboard</code>)
+          </div>
+          <ul class="mt-3 space-y-1.5 text-xs text-slate-600 list-disc list-inside">
+            <li>Strictly private to the individual worker.</li>
+            <li>Real-time Digital Twin Vitality & Health Score (0–100).</li>
+            <li>Burnout Risk Diagnostics across 4 key dimensions.</li>
+            <li>"What-If" parameter simulator for workload planning.</li>
+            <li>Zero access to HR administrative tools or peer scores.</li>
+          </ul>
+        </div>
+
+        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-5">
+          <div class="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs text-emerald-800 font-bold">🛡️</span>
+            HR Admin Portal (<code class="text-xs bg-slate-200 px-1 py-0.5 rounded">/hr</code>)
+          </div>
+          <ul class="mt-3 space-y-1.5 text-xs text-slate-600 list-disc list-inside">
+            <li>Workforce-level aggregated radar and trends.</li>
+            <li>Protected by strict <strong>k ≥ 3 anonymity</strong> threshold.</li>
+            <li>Single-use cryptographically signed employee invite generator.</li>
+            <li>Macro workload change alerts without individual identification.</li>
+            <li>Strictly prevented from viewing individual employee dashboards.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Supported Integrations -->
+    <section class="mb-12 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+      <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white">3</span>
+        Supported Productivity Integrations
+      </h2>
+
+      <p class="mt-3 text-sm text-slate-600">
+        AI Wellness Twin connects with 9 essential workplace applications. In accordance with strict ethical standards, the metadata firewall extracts timestamps only and discards all sensitive text, code, and titles:
+      </p>
+
+      <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+        <div class="rounded-2xl border border-slate-200 p-4 bg-white">
+          <div class="font-bold text-slate-900 text-sm">🐙 GitHub</div>
+          <div class="text-slate-500 mt-0.5">Code & Development</div>
+          <p class="mt-2 text-slate-600">Observes commit & PR review timestamps to measure active development hours and evening coding bursts.</p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 p-4 bg-white">
+          <div class="font-bold text-slate-900 text-sm">💻 Visual Studio Code</div>
+          <div class="text-slate-500 mt-0.5">Editor & Engineering</div>
+          <p class="mt-2 text-slate-600">Measures uninterrupted focus blocks, keystroke pacing, and micro-pauses without reading source code.</p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 p-4 bg-white">
+          <div class="font-bold text-slate-900 text-sm">🤖 ChatGPT (OpenAI)</div>
+          <div class="text-slate-500 mt-0.5">AI Reasoning & Synthesis</div>
+          <p class="mt-2 text-slate-600">Tracks AI-assisted deep work durations and session intensity. Prompt texts are strictly firewalled.</p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 p-4 bg-white">
+          <div class="font-bold text-slate-900 text-sm">✨ Google Gemini</div>
+          <div class="text-slate-500 mt-0.5">AI Research & Workflow</div>
+          <p class="mt-2 text-slate-600">Monitors research session duration and multi-modal problem-solving intervals without recording prompts.</p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 p-4 bg-white">
+          <div class="font-bold text-slate-900 text-sm">🧠 Claude (Anthropic)</div>
+          <div class="text-slate-500 mt-0.5">AI Writing & Cognition</div>
+          <p class="mt-2 text-slate-600">Observes long-form reasoning sessions and writing focus pacing with zero content logging.</p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 p-4 bg-white">
+          <div class="font-bold text-slate-900 text-sm">📅 Google Calendar / Outlook</div>
+          <div class="text-slate-500 mt-0.5">Calendar & Meetings</div>
+          <p class="mt-2 text-slate-600">Computes meeting density, back-to-back fatigue, and schedule fragmentation. Meeting titles are discarded.</p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 p-4 bg-white">
+          <div class="font-bold text-slate-900 text-sm">🎨 Figma</div>
+          <div class="text-slate-500 mt-0.5">Design & Creative Flow</div>
+          <p class="mt-2 text-slate-600">Measures design canvas active windows and creative deep work durations.</p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 p-4 bg-white">
+          <div class="font-bold text-slate-900 text-sm">💬 Slack & Messaging</div>
+          <div class="text-slate-500 mt-0.5">Team Communication</div>
+          <p class="mt-2 text-slate-600">Monitors messaging timestamps outside core working hours to protect the employee's right-to-disconnect.</p>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 p-4 bg-white">
+          <div class="font-bold text-slate-900 text-sm">🎮 Discord</div>
+          <div class="text-slate-500 mt-0.5">Voice & Community</div>
+          <p class="mt-2 text-slate-600">Observes voice channel and community active windows to safeguard healthy evening shutdown habits.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Privacy & Ethics Guarantees -->
+    <section class="mb-12 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+      <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white">4</span>
+        Privacy & Ethical Safeguards
+      </h2>
+
+      <div class="mt-4 space-y-4 text-sm leading-7 text-slate-600">
+        <div class="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
+          <div class="text-emerald-700 font-bold text-base mt-0.5">✓</div>
+          <div>
+            <strong class="text-emerald-950">1. Strict k-Anonymity (k ≥ 3):</strong>
+            HR leadership can only view aggregate health insights for teams with 3 or more members. If a team has fewer than 3 members, aggregate stats are locked to prevent inferring an individual's state.
+          </div>
+        </div>
+
+        <div class="flex items-start gap-3 rounded-2xl border border-sky-100 bg-sky-50/50 p-4">
+          <div class="text-sky-700 font-bold text-base mt-0.5">✓</div>
+          <div>
+            <strong class="text-sky-950">2. Self-Referential Calibration Only:</strong>
+            Employees are evaluated strictly against their own 28-day baseline. There are zero leaderboards, peer rankings, or productivity ratings.
+          </div>
+        </div>
+
+        <div class="flex items-start gap-3 rounded-2xl border border-purple-100 bg-purple-50/50 p-4">
+          <div class="text-purple-700 font-bold text-base mt-0.5">✓</div>
+          <div>
+            <strong class="text-purple-950">3. Zero Raw Content Ingestion:</strong>
+            The metadata firewall processes timestamps and durations only. Chat messages, commit code, prompt text, and calendar titles are never parsed or stored.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Evaluator & Test Account Guide -->
+    <section class="mb-12 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+      <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white">5</span>
+        Test Credentials & Verification Guide
+      </h2>
+
+      <p class="mt-3 text-sm text-slate-600">
+        The application is live at <a href="https://ai-wellness-twin.vercel.app" class="font-bold text-sky-600 underline">https://ai-wellness-twin.vercel.app</a>. Use the following pre-configured organic accounts:
+      </p>
+
+      <div class="mt-6 overflow-x-auto">
+        <table class="w-full text-left text-xs border border-slate-200 rounded-2xl overflow-hidden">
+          <thead class="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
+            <tr>
+              <th class="p-3.5">User Role</th>
+              <th class="p-3.5">Email</th>
+              <th class="p-3.5">Password</th>
+              <th class="p-3.5">Landing URL</th>
+              <th class="p-3.5">Key Features to Test</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 bg-white">
+            <tr>
+              <td class="p-3.5 font-bold text-slate-900">👤 Employee</td>
+              <td class="p-3.5 font-mono text-slate-600">ronnie@company.com</td>
+              <td class="p-3.5 font-mono text-slate-600">password123</td>
+              <td class="p-3.5 font-mono text-sky-600">/dashboard</td>
+              <td class="p-3.5 text-slate-600">Health Twin Score, 9-app signals grid, MBI-GS burnout assessment, "What-If" simulator, weekly reports.</td>
+            </tr>
+            <tr>
+              <td class="p-3.5 font-bold text-slate-900">🛡️ HR Admin</td>
+              <td class="p-3.5 font-mono text-slate-600">hr@company.com</td>
+              <td class="p-3.5 font-mono text-slate-600">password123</td>
+              <td class="p-3.5 font-mono text-emerald-600">/hr</td>
+              <td class="p-3.5 text-slate-600">Workforce Overview radar, department groups, single-use invite generator, longitudinal trends.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 rounded-xl bg-slate-50 p-4 text-xs text-slate-600">
+        💡 <strong>Quick Login Tip:</strong> On the <a href="https://ai-wellness-twin.vercel.app/login" class="text-sky-600 underline font-semibold">/login</a> screen, you can simply click the <strong>👤 Employee (Instant)</strong> or <strong>🛡️ HR Admin (Instant)</strong> buttons to switch roles immediately.
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-400 pt-6 pb-12">
+      <p>© 2026 AI Wellness Twin Inc. All rights reserved.</p>
+      <p class="mt-1">Built with Next.js 16, TypeScript & Tailwind CSS.</p>
+    </footer>
+
+  </main>
+
+</body>
+</html>
