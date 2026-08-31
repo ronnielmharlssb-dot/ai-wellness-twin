@@ -10,7 +10,6 @@ import {
   Coffee,
   Moon,
   ShieldCheck,
-  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   saveEmployeeMetrics,
   getMetricsForEmployee,
-  wipeAllDemoData,
 } from "@/lib/wellbeing/employeeMetrics";
 import { getStoredIntegrations } from "@/lib/integrations/syncEngine";
 import type { EmployeeDailyMetrics } from "@/lib/wellbeing/employeeTypes";
@@ -327,31 +325,6 @@ export function BaselineCalibrationSuite({
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
             <ShieldCheck className="h-3.5 w-3.5" />
             <span>100% Organic Recording</span>
-          </div>
-        </div>
-
-        {/* Pure Baseline Recording Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-[#383734]">
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#a6a6a6]">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-            <span>Pure Organic Calibration: 100% genuine signal recording (Zero mock/fast-forward)</span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                if (confirm("Wipe all demo data across the entire workspace back to Day 0?")) {
-                  wipeAllDemoData();
-                  onMetricsUpdated();
-                }
-              }}
-              className="text-[11px] h-8 px-3 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-              title="Wipes all mock/stored metrics completely back to Day 0"
-            >
-              <Trash2 className="mr-1 h-3 w-3" />
-              Wipe Demo Data (Reset to Day 0)
-            </Button>
           </div>
         </div>
 
