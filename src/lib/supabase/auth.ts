@@ -41,13 +41,22 @@ export function getRegisteredUsers(): AuthUser[] {
       return DEFAULT_ACCOUNTS;
     }
     const parsed: AuthUser[] = JSON.parse(saved);
-    const merged = Array.isArray(parsed) ? [...parsed] : [];
+    let list: AuthUser[] = Array.isArray(parsed) ? [...parsed] : [];
+
+    // Strictly enforce canonical roles and identities for default accounts
     for (const def of DEFAULT_ACCOUNTS) {
-      if (!merged.some((u) => u.email.toLowerCase() === def.email.toLowerCase())) {
-        merged.push(def);
+      const idx = list.findIndex(
+        (u) => u.email.toLowerCase() === def.email.toLowerCase()
+      );
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], role: def.role, fullName: def.fullName };
+      } else {
+        list.push(def);
       }
     }
-    return merged.length > 0 ? merged : DEFAULT_ACCOUNTS;
+
+    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(list));
+    return list;
   } catch {
     return DEFAULT_ACCOUNTS;
   }
@@ -77,18 +86,33 @@ export function saveRegisteredUser(user: AuthUser) {
 export function findRegisteredUser(email: string): AuthUser | null {
   const users = getRegisteredUsers();
   const normalized = email.trim().toLowerCase();
-  return users.find((u) => u.email.toLowerCase() === normalized) || null;
+  const found = users.find((u) => u.email.toLowerCase() === normalized);
+  if (!found) return null;
+
+  // Enforce canonical role if default account
+  const canonical = DEFAULT_ACCOUNTS.find(
+    (def) => def.email.toLowerCase() === normalized
+  );
+  if (canonical) {
+    return { ...found, role: canonical.role, fullName: canonical.fullName };
+  }
+  return found;
 }
 
 export const LIVE_TESTER_ACCOUNT: AuthUser = PRIMARY_USER_ACCOUNT;
 
-export function loginAsLiveTester(): AuthUser {
+export function loginAsRole(role: "employee" | "hr"): AuthUser {
+  const targetAccount = role === "hr" ? PRIMARY_HR_ACCOUNT : PRIMARY_USER_ACCOUNT;
   if (typeof window !== "undefined") {
-    // Save to registered users and set active session
-    saveRegisteredUser(PRIMARY_USER_ACCOUNT);
-    setLocalSessionUser(PRIMARY_USER_ACCOUNT);
+    saveRegisteredUser(targetAccount);
+    setLocalSessionUser(targetAccount);
+    window.dispatchEvent(new CustomEvent("wellness-auth-update", { detail: targetAccount }));
   }
-  return PRIMARY_USER_ACCOUNT;
+  return targetAccount;
+}
+
+export function loginAsLiveTester(): AuthUser {
+  return loginAsRole("employee");
 }
 
 export function getLocalSessionUser(): AuthUser | null {
@@ -102,7 +126,17 @@ export function getLocalSessionUser(): AuthUser | null {
       setLocalSessionUser(PRIMARY_USER_ACCOUNT);
       return PRIMARY_USER_ACCOUNT;
     }
-    return JSON.parse(saved);
+    const parsed: AuthUser = JSON.parse(saved);
+    // Auto-correct stale or corrupted roles for default accounts
+    const canonical = DEFAULT_ACCOUNTS.find(
+      (a) => a.email.toLowerCase() === parsed.email.toLowerCase()
+    );
+    if (canonical && parsed.role !== canonical.role) {
+      const fixed: AuthUser = { ...parsed, role: canonical.role, fullName: canonical.fullName };
+      setLocalSessionUser(fixed);
+      return fixed;
+    }
+    return parsed;
   } catch {
     return PRIMARY_USER_ACCOUNT;
   }

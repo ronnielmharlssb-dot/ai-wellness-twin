@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInUser, signInWithGoogle } from "@/lib/supabase/auth";
+import { signInUser, signInWithGoogle, loginAsRole } from "@/lib/supabase/auth";
 import { Button } from "@/components/ui/button";
 import { GoogleLogo } from "@/components/ui/brand-logos";
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
@@ -20,6 +20,17 @@ export default function LoginPage() {
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [googleEmailInput, setGoogleEmailInput] = useState("");
   const [notFoundEmail, setNotFoundEmail] = useState<string | null>(null);
+
+  const handleQuickLogin = (role: "employee" | "hr") => {
+    setIsLoading(true);
+    setError("");
+    const user = loginAsRole(role);
+    if (user.role === "hr") {
+      router.push("/hr");
+    } else {
+      router.push("/dashboard");
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,15 +171,11 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setEmail("ronnie@company.com");
-                  setPassword("password123");
-                  setError("");
-                }}
-                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500"
+                onClick={() => handleQuickLogin("employee")}
+                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500 cursor-pointer active:scale-95"
               >
                 <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                  👤 Employee
+                  👤 Employee (Instant)
                 </span>
                 <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
                   ronnie@company.com
@@ -177,15 +184,11 @@ export default function LoginPage() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setEmail("hr@company.com");
-                  setPassword("password123");
-                  setError("");
-                }}
-                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500"
+                onClick={() => handleQuickLogin("hr")}
+                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500 cursor-pointer active:scale-95"
               >
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                  🛡️ HR Admin
+                  🛡️ HR Admin (Instant)
                 </span>
                 <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
                   hr@company.com
