@@ -6,13 +6,21 @@ import {
   CheckCircle2,
   Sparkles,
   ShieldCheck,
+  Zap,
+  RotateCcw,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   getMetricsForEmployee,
 } from "@/lib/wellbeing/employeeMetrics";
 import { getStoredIntegrations } from "@/lib/integrations/syncEngine";
+import {
+  seedCalibratedDemoAccount,
+  resetCalibratedDemoAccount,
+  CALIBRATED_DEMO_ID,
+} from "@/lib/wellbeing/calibratedAccountSeeder";
 
 interface BaselineSuiteProps {
   employeeId: string;
@@ -27,6 +35,8 @@ export function BaselineCalibrationSuite({
   requiredDays = 28,
   onMetricsUpdated,
 }: BaselineSuiteProps) {
+  const isDemoAccount = employeeId === CALIBRATED_DEMO_ID;
+
   // Listen for real-time telemetry updates from browser tracker and integrations
   useEffect(() => {
     const handleTelemetryEvent = () => {
@@ -117,10 +127,65 @@ export function BaselineCalibrationSuite({
             </div>
 
             <p className="text-xs text-slate-500 dark:text-[#a6a6a6]">
-              Calibrating your personal workday baseline without any pre-seeded demo data.
+              {isDemoAccount
+                ? "Demo Account: You can prefill all 28 days of baseline data using the option below."
+                : "Calibrating your personal workday baseline without any pre-seeded demo data."}
             </p>
           </div>
+
+          {/* Demo Account Prefill Action */}
+          {isDemoAccount && (
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                onClick={() => {
+                  seedCalibratedDemoAccount();
+                  onMetricsUpdated();
+                }}
+                className="text-xs h-8 px-3 font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-sm"
+              >
+                <Zap className="mr-1.5 h-3.5 w-3.5 fill-current" />
+                Prefill All 28 Days
+              </Button>
+            </div>
+          )}
         </div>
+
+        {/* Demo Account Notice Banner */}
+        {isDemoAccount && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-3.5 dark:border-amber-900/60 dark:bg-amber-950/30 text-xs">
+            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-300">
+              <Zap className="h-4 w-4 text-amber-600 shrink-0" />
+              <span>
+                <strong>Demo Mode Active:</strong> This separate account has full access to prefill all 28-day baseline and survey inputs.
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  seedCalibratedDemoAccount();
+                  onMetricsUpdated();
+                }}
+                className="text-xs h-7 px-2.5 font-bold border-amber-300 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200"
+              >
+                ⚡ Calibrate 28 Days
+              </Button>
+              {daysCollected > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    resetCalibratedDemoAccount();
+                    onMetricsUpdated();
+                  }}
+                  className="text-xs h-7 px-2.5 text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-900 dark:hover:bg-rose-950/30"
+                >
+                  <RotateCcw className="mr-1 h-3 w-3" />
+                  Reset to Day 0
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Phase Progress Bar & Banner */}
         <div className="rounded-2xl border border-sky-100 bg-gradient-to-r from-sky-50/70 to-indigo-50/50 p-4 dark:border-sky-950/50 dark:from-sky-950/20 dark:to-indigo-950/20 space-y-3">

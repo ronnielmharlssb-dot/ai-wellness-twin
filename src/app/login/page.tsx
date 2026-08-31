@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInUser, signInWithGoogle, loginAsRole } from "@/lib/supabase/auth";
+import { signInUser, signInWithGoogle, loginAsRole, loginAsCalibratedDemo } from "@/lib/supabase/auth";
+import { seedCalibratedDemoAccount, isDemoAccountCalibrated } from "@/lib/wellbeing/calibratedAccountSeeder";
 import { Button } from "@/components/ui/button";
 import { GoogleLogo } from "@/components/ui/brand-logos";
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
@@ -30,6 +31,17 @@ export default function LoginPage() {
     } else {
       router.push("/dashboard");
     }
+  };
+
+  const handleCalibratedDemoLogin = () => {
+    setIsLoading(true);
+    setError("");
+    loginAsCalibratedDemo();
+    // Auto-seed the 28-day baseline telemetry for this demo account
+    if (!isDemoAccountCalibrated()) {
+      seedCalibratedDemoAccount();
+    }
+    router.push("/dashboard");
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -168,14 +180,14 @@ export default function LoginPage() {
             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2">
               🧪 Quick Demo Accounts:
             </p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => handleQuickLogin("employee")}
-                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500 cursor-pointer active:scale-95"
+                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2.5 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500 cursor-pointer active:scale-95"
               >
                 <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                  👤 Employee (Instant)
+                  👤 Employee (Organic)
                 </span>
                 <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
                   ronnie@company.com
@@ -185,13 +197,26 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => handleQuickLogin("hr")}
-                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500 cursor-pointer active:scale-95"
+                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2.5 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500 cursor-pointer active:scale-95"
               >
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                  🛡️ HR Admin (Instant)
+                  🛡️ HR Admin
                 </span>
                 <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
                   hr@company.com
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCalibratedDemoLogin}
+                className="flex flex-col items-start rounded-xl border border-amber-300 bg-amber-50/70 p-2.5 text-left transition hover:border-amber-400 hover:bg-amber-100/70 dark:border-amber-800/80 dark:bg-amber-950/40 dark:hover:border-amber-700 cursor-pointer active:scale-95"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                  ⚡ 28-Day Calibrated
+                </span>
+                <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
+                  demo@company.com
                 </span>
               </button>
             </div>

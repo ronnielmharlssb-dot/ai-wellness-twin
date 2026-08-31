@@ -24,9 +24,17 @@ export const PRIMARY_HR_ACCOUNT: AuthUser = {
   role: "hr",
 };
 
+export const CALIBRATED_DEMO_ACCOUNT: AuthUser = {
+  id: "usr-demo-calibrated",
+  email: "demo@company.com",
+  fullName: "Alex Rivera (Demo)",
+  role: "employee",
+};
+
 export const DEFAULT_ACCOUNTS: AuthUser[] = [
   PRIMARY_USER_ACCOUNT,
   PRIMARY_HR_ACCOUNT,
+  CALIBRATED_DEMO_ACCOUNT,
 ];
 
 export function getRegisteredUsers(): AuthUser[] {
@@ -116,6 +124,18 @@ export function loginAsRole(role: "employee" | "hr"): AuthUser {
     return finalAccount;
   }
   return targetAccount;
+}
+
+export function loginAsCalibratedDemo(): AuthUser {
+  if (typeof window !== "undefined") {
+    const existing = findRegisteredUser(CALIBRATED_DEMO_ACCOUNT.email);
+    const finalAccount = existing ? { ...existing, role: CALIBRATED_DEMO_ACCOUNT.role } : CALIBRATED_DEMO_ACCOUNT;
+    saveRegisteredUser(finalAccount);
+    setLocalSessionUser(finalAccount);
+    window.dispatchEvent(new CustomEvent("wellness-auth-update", { detail: finalAccount }));
+    return finalAccount;
+  }
+  return CALIBRATED_DEMO_ACCOUNT;
 }
 
 export function loginAsLiveTester(): AuthUser {

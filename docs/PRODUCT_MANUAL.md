@@ -232,7 +232,8 @@ For evaluators and reviewers testing the live application at [https://ai-wellnes
 
 | Role | Test Account Email | Password | Landing Portal | Capabilities to Test |
 | :--- | :--- | :--- | :--- | :--- |
-| **Employee** | `ronnie@company.com` | `password123` | `/dashboard` | • Health Twin Score<br>• Burnout Radar<br>• 9-App Telemetry Grid<br>• MBI-GS Assessment<br>• Twin Simulator<br>• Weekly Reports |
+| **Employee (Organic)** | `ronnie@company.com` | `password123` | `/dashboard` | • Pure Day 1 Baseline<br>• Organic Telemetry Signals<br>• Workstation Heartbeats<br>• MBI-GS Assessment<br>• Twin Simulator |
 | **HR Admin** | `hr@company.com` | `password123` | `/hr` | • Workforce Health Overview<br>• Teams & $k$-Anonymity Shield<br>• Single-Use Invite Token Generator<br>• Organizational Trends |
+| **Calibrated Demo** | `demo@company.com` | `password123` | `/dashboard` | • **Fully Established 28-Day Baseline**<br>• Pre-seeded Telemetry & Connected Apps<br>• 1-Click Calibration & Reset Controls |
 
-> **Tip**: You can use the **1-click instant demo login buttons** on the login page for effortless role switching.
+> **Tip**: You can use the **1-click instant demo login buttons** on the login page for effortless switching between the pure organic account, HR Admin, and the fully calibrated 28-day demo account.

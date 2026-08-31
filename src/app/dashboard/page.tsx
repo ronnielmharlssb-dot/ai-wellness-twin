@@ -8,6 +8,8 @@ import {
   TrendingDown,
   Layers,
   ChevronRight,
+  Sparkles,
+  RotateCcw,
 } from "lucide-react";
 
 import {
@@ -17,6 +19,11 @@ import {
 import { getMetricsForEmployee } from "@/lib/wellbeing/employeeMetrics";
 import { formatChange, metricLabels } from "@/lib/wellbeing/formatters";
 import { getLocalSessionUser, type AuthUser } from "@/lib/supabase/auth";
+import {
+  seedCalibratedDemoAccount,
+  resetCalibratedDemoAccount,
+  CALIBRATED_DEMO_ID,
+} from "@/lib/wellbeing/calibratedAccountSeeder";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -132,6 +139,41 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
+          {/* Demo Account Controls Banner for Calibrated Account */}
+          {user?.id === CALIBRATED_DEMO_ID && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-3.5 dark:border-amber-900/60 dark:bg-amber-950/30 text-xs">
+              <div className="flex items-center gap-2 text-amber-900 dark:text-amber-300 font-semibold">
+                <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
+                <span>
+                  <strong>Demo Mode:</strong> 28-Day Baseline is fully established with active signals & behavioral patterns.
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    seedCalibratedDemoAccount();
+                    loadUserData(user.id);
+                  }}
+                  className="text-xs h-7 px-2.5 font-bold border-amber-300 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200"
+                >
+                  ⚡ Re-Seed Telemetry
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    resetCalibratedDemoAccount();
+                    loadUserData(user.id);
+                  }}
+                  className="text-xs h-7 px-2.5 text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-900 dark:hover:bg-rose-950/30"
+                >
+                  <RotateCcw className="mr-1 h-3 w-3" />
+                  Reset to Day 0
+                </Button>
+              </div>
+            </div>
+          )}
+
           <ToolActivityBreakdown employeeId={user?.id || "usr-ronnie"} />
 
           {/* Unified Primary Hero Reflection Card */}
