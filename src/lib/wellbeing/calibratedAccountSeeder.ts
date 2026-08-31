@@ -1,5 +1,6 @@
 import type { EmployeeDailyMetrics } from "./employeeTypes";
 import { getMetricsForEmployee, saveEmployeeMetricsBatch, clearEmployeeMetrics } from "./employeeMetrics";
+import { getStoredIntegrations, saveStoredIntegrations } from "../integrations/syncEngine";
 
 export const CALIBRATED_DEMO_ID = "usr-demo-calibrated";
 
@@ -65,10 +66,9 @@ export function seedCalibratedDemoAccount(): void {
   const full28Days = generate28DayMetrics(CALIBRATED_DEMO_ID);
   saveEmployeeMetricsBatch(full28Days);
 
-  // 2. Pre-link realistic sample integrations for the demo account
+  // 2. Pre-link realistic sample integrations for the demo account (isolated to CALIBRATED_DEMO_ID)
   try {
-    const existing = localStorage.getItem("wellness-integrations-config");
-    let integrations = existing ? JSON.parse(existing) : [];
+    const integrations = getStoredIntegrations(CALIBRATED_DEMO_ID);
     
     // Ensure all core tools show as connected with verified handles
     const demoHandles: Record<string, string> = {
@@ -83,24 +83,24 @@ export function seedCalibratedDemoAccount(): void {
       discord: "alex_r#4092",
     };
 
-    if (Array.isArray(integrations)) {
-      integrations = integrations.map((item) => {
-        if (demoHandles[item.provider]) {
-          return {
-            ...item,
-            connected: true,
-            config: {
-              ...item.config,
-              username: demoHandles[item.provider],
-              workspaceName: demoHandles[item.provider],
-              calendarEmail: demoHandles[item.provider],
-            },
-          };
-        }
-        return item;
-      });
-      localStorage.setItem("wellness-integrations-config", JSON.stringify(integrations));
-    }
+    const updatedIntegrations = integrations.map((item) => {
+      if (demoHandles[item.provider]) {
+        const handle = demoHandles[item.provider];
+        return {
+          ...item,
+          connected: true,
+          config: {
+            ...item.config,
+            username: handle,
+            workspaceName: handle,
+            calendarEmail: handle,
+            accountLabel: handle,
+          },
+        };
+      }
+      return item;
+    });
+    saveStoredIntegrations(updatedIntegrations, CALIBRATED_DEMO_ID);
   } catch {
     // ignore
   }

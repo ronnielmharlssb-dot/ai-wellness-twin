@@ -121,13 +121,28 @@ export const DEFAULT_INTEGRATIONS: IntegrationConnection[] = [
   },
 ];
 
-export function getStoredIntegrations(): IntegrationConnection[] {
+function getStorageKey(employeeId?: string): string {
+  if (typeof window === "undefined") return INTEGRATIONS_STORAGE_KEY;
+  try {
+    const activeUserId = employeeId || (JSON.parse(localStorage.getItem("wellness-auth-user") || "{}")?.id) || "usr-ronnie";
+    return `${INTEGRATIONS_STORAGE_KEY}:${activeUserId}`;
+  } catch {
+    return INTEGRATIONS_STORAGE_KEY;
+  }
+}
+
+export function getStoredIntegrations(employeeId?: string): IntegrationConnection[] {
   if (typeof window === "undefined") {
     return DEFAULT_INTEGRATIONS;
   }
 
   try {
-    const saved = localStorage.getItem(INTEGRATIONS_STORAGE_KEY);
+    const key = getStorageKey(employeeId);
+    let saved = localStorage.getItem(key);
+    // Backward compatibility fallback to legacy global key if user key is not yet populated
+    if (!saved) {
+      saved = localStorage.getItem(INTEGRATIONS_STORAGE_KEY);
+    }
     if (!saved) return DEFAULT_INTEGRATIONS;
 
     const parsed: IntegrationConnection[] = JSON.parse(saved);
@@ -144,9 +159,10 @@ export function getStoredIntegrations(): IntegrationConnection[] {
   }
 }
 
-export function saveStoredIntegrations(integrations: IntegrationConnection[]) {
+export function saveStoredIntegrations(integrations: IntegrationConnection[], employeeId?: string) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(INTEGRATIONS_STORAGE_KEY, JSON.stringify(integrations));
+  const key = getStorageKey(employeeId);
+  localStorage.setItem(key, JSON.stringify(integrations));
 }
 
 export function validateGoogleAccount(email: string): boolean {

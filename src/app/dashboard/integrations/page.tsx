@@ -54,14 +54,17 @@ export default function IntegrationsPage() {
     const sessionUser = getLocalSessionUser();
     setUser(sessionUser);
 
-    const loaded = getStoredIntegrations();
+    const loaded = getStoredIntegrations(sessionUser?.id);
     setIntegrations(loaded);
     const initialInputs: Record<string, string> = {};
 
     loaded.forEach((item) => {
-      if (item.config.username) initialInputs[item.provider] = item.config.username;
-      if (item.config.calendarEmail) initialInputs[item.provider] = item.config.calendarEmail;
-      if (item.config.workspaceName) initialInputs[item.provider] = item.config.workspaceName;
+      initialInputs[item.provider] =
+        item.config.accountLabel ||
+        item.config.username ||
+        item.config.calendarEmail ||
+        item.config.workspaceName ||
+        "";
     });
 
     setInputs(initialInputs);
@@ -616,7 +619,7 @@ export default function IntegrationsPage() {
                                 onClick={() => handleDisconnect(item.provider)}
                                 className="text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
                               >
-                                Unlink
+                                Disconnect
                               </Button>
                             )}
 
