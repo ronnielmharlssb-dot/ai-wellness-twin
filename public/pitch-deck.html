@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Wellness Twin — Investor & Competition Pitch Deck</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .slide {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+    .slide.active {
+      display: flex;
+      opacity: 1;
+    }
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      .slide {
+        display: block !important;
+        opacity: 1 !important;
+        page-break-after: always;
+        min-height: 100vh;
+        margin-bottom: 2rem;
+      }
+      body {
+        background: white !important;
+        color: black !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen flex flex-col justify-between selection:bg-sky-500 selection:text-white">
+
+  <!-- Top Slide Navigation & Brand Header -->
+  <header class="no-print border-b border-slate-800 bg-[#0f172a]/90 backdrop-blur-md px-6 py-3.5 sticky top-0 z-50">
+    <div class="mx-auto flex max-w-6xl items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img src="/wellness-twin-logo-transparent.png" alt="AI Wellness Twin" class="h-8 w-auto">
+        <div>
+          <span class="text-sm font-bold text-white tracking-tight">AI Wellness Twin</span>
+          <span class="ml-2 rounded-full bg-sky-500/10 border border-sky-500/30 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-400">Pitch Deck v1.0</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 text-xs">
+        <span id="slideIndicator" class="font-mono text-slate-400 font-bold">Slide 1 of 10</span>
+        <button onclick="prevSlide()" class="rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-1.5 font-bold text-slate-200 hover:bg-slate-700 transition active:scale-95">
+          ← Prev
+        </button>
+        <button onclick="nextSlide()" class="rounded-xl border border-sky-500/40 bg-sky-600 px-3.5 py-1.5 font-bold text-white hover:bg-sky-500 transition active:scale-95 shadow-sm">
+          Next →
+        </button>
+        <button onclick="window.print()" class="rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-slate-300 hover:text-white hover:bg-slate-700 transition" title="Save as PDF">
+          🖨️ PDF
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Slide Canvas Area -->
+  <main class="flex-1 flex items-center justify-center p-6 md:p-12">
+    <div class="w-full max-w-5xl">
+
+      <!-- SLIDE 1: Title & Hook -->
+      <div class="slide active flex-col items-center justify-center text-center py-12 rounded-3xl border border-slate-800/80 bg-slate-900/60 p-8 md:p-14 shadow-2xl backdrop-blur-xl animate-in fade-in">
+        <span class="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-sky-400">
+          ✨ Intelligent Workplace Digital Twin
+        </span>
+        
+        <h1 class="mt-6 text-4xl sm:text-6xl font-extrabold tracking-tight text-white">
+          AI Wellness Twin
+        </h1>
+
+        <p class="mt-4 max-w-2xl text-lg sm:text-xl text-slate-300 font-medium leading-relaxed">
+          Proactive Burnout Prevention Powered by Passive Workday Telemetry & Adaptive Baseline Calibration.
+        </p>
+
+        <div class="mt-10 flex flex-wrap items-center justify-center gap-4 text-xs font-semibold">
+          <div class="rounded-2xl border border-slate-800 bg-slate-800/50 px-5 py-3 text-slate-300">
+            <span class="text-slate-500 block text-[10px] uppercase font-bold">Live Application</span>
+            <a href="https://ai-wellness-twin.vercel.app" target="_blank" class="text-sky-400 font-mono underline">ai-wellness-twin.vercel.app</a>
+          </div>
+          <div class="rounded-2xl border border-slate-800 bg-slate-800/50 px-5 py-3 text-slate-300">
+            <span class="text-slate-500 block text-[10px] uppercase font-bold">Key Innovation</span>
+            <span>2-4 Week Predictive Burnout Forecast</span>
+          </div>
+          <div class="rounded-2xl border border-slate-800 bg-slate-800/50 px-5 py-3 text-slate-300">
+            <span class="text-slate-500 block text-[10px] uppercase font-bold">Privacy Standard</span>
+            <span class="text-emerald-400 font-bold">Strict k ≥ 3 Anonymity</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 2: The Problem -->
+      <div class="slide flex-col justify-center py-8 rounded-3xl border border-slate-800/80 bg-slate-900/60 p-8 md:p-12 shadow-2xl backdrop-blur-xl">
+        <span class="text-xs font-bold uppercase tracking-wider text-rose-400">The Problem</span>
+        <h2 class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">The $322 Billion Silent Burnout Crisis</h2>
+        
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div class="rounded-2xl border border-rose-950/40 bg-rose-950/20 p-6">
+            <div class="text-3xl font-black text-rose-400">76%</div>
+            <h3 class="mt-2 text-sm font-bold text-white">Knowledge Worker Burnout</h3>
+            <p class="mt-2 text-xs leading-relaxed text-slate-400">Knowledge workers suffer from acute cognitive exhaustion driven by fragmented context-switching and relentless meeting fatigue.</p>
+          </div>
+
+          <div class="rounded-2xl border border-rose-950/40 bg-rose-950/20 p-6">
+            <div class="text-3xl font-black text-rose-400">21.5 hrs</div>
+            <h3 class="mt-2 text-sm font-bold text-white">Weekly Meeting Overload</h3>
+            <p class="mt-2 text-xs leading-relaxed text-slate-400">Schedule fragmentation leaves zero contiguous deep-work blocks, forcing staff into late-night overtime to complete core tasks.</p>
+          </div>
+
+          <div class="rounded-2xl border border-rose-950/40 bg-rose-950/20 p-6">
+            <div class="text-3xl font-black text-rose-400">Failure</div>
+            <h3 class="mt-2 text-sm font-bold text-white">Quarterly HR Surveys</h3>
+            <p class="mt-2 text-xs leading-relaxed text-slate-400">Traditional pulse checks are retrospective and distrusted. By the time HR sees low scores, the employee has already resigned.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: The Solution -->
+      <div class="slide flex-col justify-center py-8 rounded-3xl border border-slate-800/80 bg-slate-900/60 p-8 md:p-12 shadow-2xl backdrop-blur-xl">
+        <span class="text-xs font-bold uppercase tracking-wider text-sky-400">The Solution</span>
+        <h2 class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">A Continuous, Calibrated Digital Twin</h2>
+        
+        <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
+          <div class="rounded-2xl border border-sky-900/40 bg-sky-950/20 p-5">
+            <div class="flex items-center gap-2.5 font-bold text-white">
+              <span class="flex h-7 w-7 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400">1</span>
+              Passive Telemetry Integration
+            </div>
+            <p class="mt-2.5 text-xs leading-relaxed text-slate-400">Connects seamlessly with 9 tools (GitHub, VS Code, Slack, Calendar, ChatGPT, etc.) using a zero-text metadata firewall.</p>
+          </div>
+
+          <div class="rounded-2xl border border-sky-900/40 bg-sky-950/20 p-5">
+            <div class="flex items-center gap-2.5 font-bold text-white">
+              <span class="flex h-7 w-7 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400">2</span>
+              28-Day Personal Calibration
+            </div>
+            <p class="mt-2.5 text-xs leading-relaxed text-slate-400">Evaluates employees strictly against their own historical baseline. Zero leaderboards, peer rankings, or competitive stress.</p>
+          </div>
+
+          <div class="rounded-2xl border border-sky-900/40 bg-sky-950/20 p-5">
+            <div class="flex items-center gap-2.5 font-bold text-white">
+              <span class="flex h-7 w-7 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400">3</span>
+              "What-If" Digital Twin Simulator
+            </div>
+            <p class="mt-2.5 text-xs leading-relaxed text-slate-400">Interactive parameter simulation predicting recovery trajectories when meeting loads are reduced or focus blocks restored.</p>
+          </div>
+
+          <div class="rounded-2xl border border-sky-900/40 bg-sky-950/20 p-5">
+            <div class="flex items-center gap-2.5 font-bold text-white">
+              <span class="flex h-7 w-7 items-center justify-center rounded-xl bg-sky-500/20 text-sky-400">4</span>
+              Strict k-Anonymity (k ≥ 3)
+            </div>
+            <p class="mt-2.5 text-xs leading-relaxed text-slate-400">Mathematical privacy guarantee ensuring HR leadership can address team hazards while guaranteeing zero surveillance of individuals.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4: Telemetry & Supported Apps -->
+      <div class="slide flex-col justify-center py-8 rounded-3xl border border-slate-800/80 bg-slate-900/60 p-8 md:p-12 shadow-2xl backdrop-blur-xl">
+        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Multi-Modal Ingestion</span>
+        <h2 class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">9 Supported Workday Integrations</h2>
+        
+        <div class="mt-6 grid grid-cols-3 gap-3 text-xs">
+          <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-3">
+            <div class="font-bold text-white">🐙 GitHub</div>
+            <div class="text-slate-400 text-[11px] mt-1">Commit & PR review timestamps</div>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-3">
+            <div class="font-bold text-white">💻 VS Code</div>
+            <div class="text-slate-400 text-[11px] mt-1">Focus blocks & micro-pauses</div>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-3">
+            <div class="font-bold text-white">🤖 ChatGPT</div>
+            <div class="text-slate-400 text-[11px] mt-1">AI consultation windows</div>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-3">
+            <div class="font-bold text-white">✨ Google Gemini</div>
+            <div class="text-slate-400 text-[11px] mt-1">AI research session intervals</div>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-3">
+            <div class="font-bold text-white">🧠 Claude</div>
+            <div class="text-slate-400 text-[11px] mt-1">Cognitive pacing & deep work</div>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-3">
+            <div class="font-bold text-white">📅 Google Calendar</div>
+            <div class="text-slate-400 text-[11px] mt-1">Meeting load & buffer gaps</div>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-3">
+            <div class="font-bold text-white">🎨 Figma</div>
+            <div class="text-slate-400 text-[11px] mt-1">Creative canvas active time</div>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-3">
+            <div class="font-bold text-white">💬 Slack</div>
+            <div class="text-slate-400 text-[11px] mt-1">Evening right-to-disconnect</div>
+          </div>
+          <div class="rounded-xl border border-slate-800 bg-slate-800/40 p-3">
+            <div class="font-bold text-white">🎮 Discord</div>
+            <div class="text-slate-400 text-[11px] mt-1">Voice & community active hours</div>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded-xl border border-emerald-900/60 bg-emerald-950/30 p-3 text-xs text-emerald-300 flex items-center gap-2">
+          <span>🔒</span>
+          <span><strong>Metadata Firewall:</strong> All prompt text, code snippets, and meeting titles are strictly stripped before processing.</span>
+        </div>
+      </div>
+
+      <!-- SLIDE 5: Employee & HR Portal Experience -->
+      <div class="slide flex-col justify-center py-8 rounded-3xl border border-slate-800/80 bg-slate-900/60 p-8 md:p-12 shadow-2xl backdrop-blur-xl">
+        <span class="text-xs font-bold uppercase tracking-wider text-purple-400">User Experience</span>
+        <h2 class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">Dual-Portal Role Architecture</h2>
+
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="rounded-2xl border border-sky-900/50 bg-sky-950/20 p-5">
+            <div class="font-bold text-sky-400 text-sm">👤 Employee Portal (/dashboard)</div>
+            <ul class="mt-3 space-y-2 text-xs text-slate-300">
+              <li>• <strong>Twin Vitality Score:</strong> Live composite health index (0–100).</li>
+              <li>• <strong>Burnout Radar:</strong> Diagnostic of Exhaustion, Cynicism & Friction.</li>
+              <li>• <strong>"What-If" Simulator:</strong> Model meeting cuts to predict recovery.</li>
+              <li>• <strong>MBI-GS Surveys:</strong> Subjective validation checks.</li>
+            </ul>
+          </div>
+
+          <div class="rounded-2xl border border-emerald-900/50 bg-emerald-950/20 p-5">
+            <div class="font-bold text-emerald-400 text-sm">🛡️ HR Admin Portal (/hr)</div>
+            <ul class="mt-3 space-y-2 text-xs text-slate-300">
+              <li>• <strong>Workforce Radar:</strong> Anonymized department health indices.</li>
+              <li>• <strong>k-Anonymity Shield:</strong> Teams with &lt; 3 members locked.</li>
+              <li>• <strong>Single-Use Invites:</strong> Secure onboarding token generator.</li>
+              <li>• <strong>Macro Trends:</strong> Multi-quarter overtime early warning.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6: Market Opportunity -->
+      <div class="slide flex-col justify-center py-8 rounded-3xl border border-slate-800/80 bg-slate-900/60 p-8 md:p-12 shadow-2xl backdrop-blur-xl">
+        <span class="text-xs font-bold uppercase tracking-wider text-sky-400">Market Size</span>
+        <h2 class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">A Massive B2B Opportunity</h2>
+        
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5 text-center">
+          <div class="rounded-2xl border border-slate-800 bg-slate-800/40 p-6">
+            <div class="text-xs font-bold uppercase text-slate-400">TAM (Global Wellness)</div>
+            <div class="mt-2 text-4xl font-black text-white">$61.2B</div>
+            <div class="mt-1 text-xs text-slate-500">Corporate health market by 2027</div>
+          </div>
+
+          <div class="rounded-2xl border border-sky-900/50 bg-sky-950/20 p-6">
+            <div class="text-xs font-bold uppercase text-sky-400">SAM (Workplace Retention)</div>
+            <div class="mt-2 text-4xl font-black text-sky-400">$23.8B</div>
+            <div class="mt-1 text-xs text-slate-400">B2B tech mental health software</div>
+          </div>
+
+          <div class="rounded-2xl border border-emerald-900/50 bg-emerald-950/20 p-6">
+            <div class="text-xs font-bold uppercase text-emerald-400">SOM (Initial Beachhead)</div>
+            <div class="mt-2 text-4xl font-black text-emerald-400">$3.2B</div>
+            <div class="mt-1 text-xs text-slate-400">Tech & remote-first engineering teams</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7: Business Model & Pricing -->
+      <div class="slide flex-col justify-center py-8 rounded-3xl border border-slate-800/80 bg-slate-900/60 p-8 md:p-12 shadow-2xl backdrop-blur-xl">
+        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Monetization</span>
+        <h2 class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">Tiered B2B SaaS Subscriptions</h2>
+
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div class="rounded-2xl border border-slate-800 bg-slate-800/40 p-5 flex flex-col justify-between">
+            <div>
+              <div class="font-bold text-white text-sm">Starter</div>
+              <div class="mt-2 text-2xl font-black text-white">$6 <span class="text-xs text-slate-400 font-normal">/ seat / mo</span></div>
+              <p class="mt-2 text-xs text-slate-400">For startups (10–50 seats). 4 core integrations, individual twin score, basic assessment.</p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-sky-500/60 bg-sky-950/30 p-5 flex flex-col justify-between relative">
+            <span class="absolute -top-2.5 right-4 rounded-full bg-sky-500 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-black">Most Popular</span>
+            <div>
+              <div class="font-bold text-sky-400 text-sm">Growth / Pro</div>
+              <div class="mt-2 text-2xl font-black text-white">$12 <span class="text-xs text-slate-400 font-normal">/ seat / mo</span></div>
+              <p class="mt-2 text-xs text-slate-400">For mid-market tech (50–500 seats). All 9 app connectors, What-If simulator, HR k ≥ 3 aggregate radar.</p>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-800 bg-slate-800/40 p-5 flex flex-col justify-between">
+            <div>
+              <div class="font-bold text-white text-sm">Enterprise</div>
+              <div class="mt-2 text-2xl font-black text-white">$18 <span class="text-xs text-slate-400 font-normal">/ seat / mo</span></div>
+              <p class="mt-2 text-xs text-slate-400">For 500+ seats. Custom telemetry webhooks, SSO / Okta, dedicated AI tuning, SOC2 compliance.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 8: Competitive Advantage -->
+      <div class="slide flex-col justify-center py-8 rounded-3xl border border-slate-800/80 bg-slate-900/60 p-8 md:p-12 shadow-2xl backdrop-blur-xl">
+        <span class="text-xs font-bold uppercase tracking-wider text-sky-400">Competitive Moat</span>
+        <h2 class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">Why AI Wellness Twin Wins</h2>
+
+        <div class="mt-6 overflow-x-auto">
+          <table class="w-full text-left text-xs border border-slate-800 rounded-xl overflow-hidden">
+            <thead class="bg-slate-800/80 text-slate-300 uppercase font-bold tracking-wider">
+              <tr>
+                <th class="p-3">Capability</th>
+                <th class="p-3 text-sky-400">AI Wellness Twin</th>
+                <th class="p-3 text-slate-400">Culture Amp / Lattice</th>
+                <th class="p-3 text-slate-400">Hubstaff / Time Doctor</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800 text-slate-300">
+              <tr>
+                <td class="p-3 font-semibold text-white">Passive Telemetry (9 Tools)</td>
+                <td class="p-3 text-sky-400 font-bold">✅ Yes (Zero Content)</td>
+                <td class="p-3 text-rose-400">❌ No</td>
+                <td class="p-3 text-amber-400">⚠️ Invasive Tracking</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold text-white">Predictive Burnout Window</td>
+                <td class="p-3 text-sky-400 font-bold">✅ 2–4 Weeks Early</td>
+                <td class="p-3 text-rose-400">❌ Reactive Post-Hoc</td>
+                <td class="p-3 text-rose-400">❌ No</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold text-white">What-If Simulation Engine</td>
+                <td class="p-3 text-sky-400 font-bold">✅ Yes</td>
+                <td class="p-3 text-rose-400">❌ No</td>
+                <td class="p-3 text-rose-400">❌ No</td>
+              </tr>
+              <tr>
+                <td class="p-3 font-semibold text-white">Strict k-Anonymity (k ≥ 3)</td>
+                <td class="p-3 text-emerald-400 font-bold">✅ Mathematical Guard</td>
+                <td class="p-3 text-amber-400">⚠️ Weak</td>
+                <td class="p-3 text-rose-400">❌ Zero Privacy</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SLIDE 9: Roadmap -->
+      <div class="slide flex-col justify-center py-8 rounded-3xl border border-slate-800/80 bg-slate-900/60 p-8 md:p-12 shadow-2xl backdrop-blur-xl">
+        <span class="text-xs font-bold uppercase tracking-wider text-purple-400">Execution Roadmap</span>
+        <h2 class="mt-2 text-3xl sm:text-4xl font-extrabold text-white">From MVP to Enterprise Scale</h2>
+
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+          <div class="rounded-2xl border border-emerald-900/50 bg-emerald-950/20 p-5">
+            <div class="font-bold text-emerald-400 text-sm">Phase 1: Production MVP</div>
+            <div class="text-[10px] text-emerald-500 font-mono mt-0.5">COMPLETED · Q3 2026</div>
+            <p class="mt-3 text-slate-300 leading-relaxed">• Next.js 16 live production app.<br>• 9 productivity integrations.<br>• MBI-GS survey & Twin Simulator.<br>• Organic Employee & HR portals.</p>
+          </div>
+
+          <div class="rounded-2xl border border-sky-900/50 bg-sky-950/20 p-5">
+            <div class="font-bold text-sky-400 text-sm">Phase 2: Wearable Biometrics</div>
+            <div class="text-[10px] text-sky-500 font-mono mt-0.5">IN PROGRESS · Q4 2026</div>
+            <p class="mt-3 text-slate-300 leading-relaxed">• Apple Health, Oura, Whoop sync.<br>• Autonomous Calendar Buffer Auto-Blocking.<br>• 5 Pilot Enterprise Deployments.</p>
+          </div>
+
+          <div class="rounded-2xl border border-purple-900/50 bg-purple-950/20 p-5">
+            <div class="font-bold text-purple-400 text-sm">Phase 3: Autonomous Health Twin</div>
+            <div class="text-[10px] text-purple-500 font-mono mt-0.5">FUTURE · 2027+</div>
+            <p class="mt-3 text-slate-300 leading-relaxed">• Enterprise workload auto-rebalancing.<br>• Clinical burnout risk certification.<br>• Global enterprise expansion.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 10: The Ask & Call to Action -->
+      <div class="slide flex-col items-center justify-center text-center py-12 rounded-3xl border border-slate-800/80 bg-slate-900/60 p-8 md:p-14 shadow-2xl backdrop-blur-xl">
+        <span class="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-sky-400">
+          🚀 Next Steps
+        </span>
+
+        <h2 class="mt-6 text-3xl sm:text-5xl font-extrabold text-white">
+          Join Us in Transforming Workplace Wellbeing
+        </h2>
+
+        <p class="mt-4 max-w-xl text-base text-slate-300 leading-relaxed">
+          We are seeking <strong>Enterprise Pilot Partners</strong> and <strong>Pre-Seed Investment</strong> to accelerate wearable biometrics and expansion.
+        </p>
+
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <a href="https://ai-wellness-twin.vercel.app/login" target="_blank" class="rounded-2xl bg-sky-500 px-6 py-3 text-xs font-bold text-black shadow-lg hover:bg-sky-400 transition active:scale-95">
+            Launch Live Demo App ↗
+          </a>
+          <a href="https://github.com/ronnielmharlssb-dot/ai-wellness-twin" target="_blank" class="rounded-2xl border border-slate-700 bg-slate-800 px-6 py-3 text-xs font-bold text-white hover:bg-slate-700 transition active:scale-95">
+            View GitHub Repository
+          </a>
+        </div>
+
+        <div class="mt-8 text-xs text-slate-400">
+          Contact Founders: <span class="text-slate-200 font-mono">ronnie@company.com</span> | <span class="text-slate-200 font-mono">team@wellness-twin.ai</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Slide Footer Controls -->
+  <footer class="no-print border-t border-slate-800/80 bg-[#0f172a]/90 px-6 py-3">
+    <div class="mx-auto flex max-w-6xl items-center justify-between text-xs text-slate-400">
+      <div>Use <strong>← / →</strong> Arrow Keys or buttons to navigate slides</div>
+      <div>© 2026 AI Wellness Twin Inc.</div>
+    </div>
+  </footer>
+
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const indicator = document.getElementById('slideIndicator');
+
+    function showSlide(index) {
+      if (index < 0) index = 0;
+      if (index >= slides.length) index = slides.length - 1;
+      
+      slides.forEach((s, idx) => {
+        if (idx === index) {
+          s.classList.add('active');
+        } else {
+          s.classList.remove('active');
+        }
+      });
+
+      currentSlide = index;
+      if (indicator) {
+        indicator.innerText = `Slide ${currentSlide + 1} of ${slides.length}`;
+      }
+    }
+
+    function nextSlide() {
+      showSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+      showSlide(currentSlide - 1);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'Space') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft') {
+        prevSlide();
+      }
+    });
+  </script>
+</body>
+</html>
