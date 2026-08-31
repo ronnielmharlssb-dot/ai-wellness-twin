@@ -448,6 +448,18 @@
       showSlide(currentSlide - 1);
     }
 
+    // Store pitch deck data in browser localStorage
+    try {
+      const pitchDeckData = {
+        title: "AI Wellness Twin — Pitch Deck",
+        version: "1.0 MVP",
+        storedAt: new Date().toISOString(),
+        totalSlides: slides.length,
+        url: window.location.href
+      };
+      localStorage.setItem("wellness-pitch-deck-data", JSON.stringify(pitchDeckData));
+    } catch (_) {}
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowRight' || e.key === 'Space') {
         nextSlide();
