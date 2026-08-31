@@ -21,6 +21,7 @@ import {
   resetCalibratedDemoAccount,
   CALIBRATED_DEMO_ID,
 } from "@/lib/wellbeing/calibratedAccountSeeder";
+import { workstationTracker } from "@/lib/telemetry/workstationTracker";
 
 interface BaselineSuiteProps {
   employeeId: string;
@@ -92,6 +93,15 @@ export function BaselineCalibrationSuite({
 
   const completedPastDays = pastMetrics.length;
   const currentDayIndex = Math.min(requiredDays, completedPastDays + 1);
+
+  const trackerSeconds = typeof window !== "undefined" ? workstationTracker.getState().todayActiveSeconds : 0;
+  const trackerHours = Number((trackerSeconds / 3600).toFixed(1));
+  const effectiveTodayHours =
+    trackerHours > 0
+      ? trackerHours
+      : todayMetric
+      ? todayMetric.workingHours
+      : 0;
 
   // Compute preliminary averages from data collected so far
   const avgWorkingHours =
@@ -269,7 +279,7 @@ export function BaselineCalibrationSuite({
                     <span className="mt-1 text-[10px] font-medium opacity-50">—</span>
                   )}
 
-                  {metricForDay && (
+                  {(metricForDay || isTodayActive) && (
                     <span
                       className={`mt-1 text-[9px] font-semibold truncate max-w-full ${
                         isTodayActive
@@ -277,7 +287,9 @@ export function BaselineCalibrationSuite({
                           : "text-emerald-800 dark:text-emerald-300"
                       }`}
                     >
-                      {metricForDay.workingHours}h
+                      {isTodayActive
+                        ? `${effectiveTodayHours}h`
+                        : `${metricForDay?.workingHours}h`}
                     </span>
                   )}
                 </div>

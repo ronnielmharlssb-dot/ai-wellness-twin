@@ -52,21 +52,24 @@ export function saveEmployeeMetricsBatch(
 
     if (existingIndex >= 0) {
       const existing = updated[existingIndex];
-      // Accumulate across multiple tools for the same day (capped at realistic daily bounds)
-      const combinedHours = Number(
-        Math.min(14, Number(existing.workingHours || 0) + Number(metric.workingHours || 0)).toFixed(1)
-      );
-      const combinedMeetings = Math.min(600, (existing.meetingLoad || 0) + (metric.meetingLoad || 0));
-      const combinedBreaks = Math.min(12, (existing.breakFrequency || 0) + (metric.breakFrequency || 0));
-      const combinedAfterHours = Math.min(300, (existing.afterHoursActivity || 0) + (metric.afterHoursActivity || 0));
-
-      updated[existingIndex] = {
-        ...existing,
-        workingHours: combinedHours,
-        meetingLoad: combinedMeetings,
-        breakFrequency: combinedBreaks,
-        afterHoursActivity: combinedAfterHours,
-      };
+      // If telemetry source, use the exact atomic daily total from tracker engine
+      if (metric.source === "telemetry") {
+        updated[existingIndex] = {
+          ...existing,
+          ...metric,
+          workingHours: Number(metric.workingHours.toFixed(1)),
+        };
+      } else {
+        // External source sync: take realistic max bounds
+        updated[existingIndex] = {
+          ...existing,
+          ...metric,
+          workingHours: Number(Math.max(existing.workingHours || 0, metric.workingHours || 0).toFixed(1)),
+          meetingLoad: Math.max(existing.meetingLoad || 0, metric.meetingLoad || 0),
+          breakFrequency: Math.max(existing.breakFrequency || 0, metric.breakFrequency || 0),
+          afterHoursActivity: Math.max(existing.afterHoursActivity || 0, metric.afterHoursActivity || 0),
+        };
+      }
     } else {
       updated.push(metric);
     }
