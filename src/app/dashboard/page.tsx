@@ -39,7 +39,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const sessionUser = getLocalSessionUser();
     setUser(sessionUser);
-    const employeeId = sessionUser?.id || "emp-001";
+    const employeeId = sessionUser?.id || "usr-ronnie";
     loadUserData(employeeId);
   }, []);
 
@@ -122,17 +122,17 @@ export default function DashboardPage() {
       {isBuilding ? (
         <div className="space-y-6">
           <BaselineCalibrationSuite
-            employeeId={user?.id || "usr-live-tester"}
+            employeeId={user?.id || "usr-ronnie"}
             daysCollected={assessment?.daysCollected ?? 0}
             requiredDays={assessment?.requiredDays ?? 28}
-            onMetricsUpdated={() => loadUserData(user?.id || "usr-live-tester")}
+            onMetricsUpdated={() => loadUserData(user?.id || "usr-ronnie")}
           />
 
-          <ToolActivityBreakdown employeeId={user?.id || "usr-live-tester"} />
+          <ToolActivityBreakdown employeeId={user?.id || "usr-ronnie"} />
         </div>
       ) : (
         <>
-          <ToolActivityBreakdown employeeId={user?.id || "usr-live-tester"} />
+          <ToolActivityBreakdown employeeId={user?.id || "usr-ronnie"} />
 
           {/* Unified Primary Hero Reflection Card */}
           <Card className="p-6 sm:p-7">

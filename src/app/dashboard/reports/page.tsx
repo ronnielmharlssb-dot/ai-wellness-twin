@@ -185,7 +185,7 @@ export default function ReportsPage() {
 
     // 3. Load assessment telemetry
     const user = getLocalSessionUser();
-    const employeeId = user?.id || "emp-001";
+    const employeeId = user?.id || "usr-ronnie";
     const metrics = getMetricsForEmployee(employeeId);
     const result = buildEmployeeAssessment(metrics);
     setAssessment(result);

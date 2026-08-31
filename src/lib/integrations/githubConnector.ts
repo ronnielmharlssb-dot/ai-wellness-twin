@@ -34,57 +34,88 @@ export async function fetchGitHubSignals(
     });
 
     const events: GitHubEvent[] = res.ok ? await res.json() : [];
-
-    // Filter events to ONLY include today's live activity (Never backfill past historical days)
     const todayStr = new Date().toISOString().split("T")[0];
-    const todayEvents = events.filter((e) => e.created_at && e.created_at.startsWith(todayStr));
 
-    if (todayEvents.length === 0) {
-      // Return a clean single live signal for today
+    if (!Array.isArray(events) || events.length === 0) {
       return [
         {
           employeeId,
           date: todayStr,
-          activeMinutes: 60,
+          activeMinutes: 0,
           meetingMinutes: 0,
           afterHoursMinutes: 0,
-          breakCount: 1,
-          appSwitches: 10,
+          breakCount: 0,
+          appSwitches: 0,
           source: "github",
         },
       ];
     }
 
-    const timestamps = todayEvents
-      .map((e) => new Date(e.created_at))
-      .sort((a, b) => a.getTime() - b.getTime());
-
-    const firstEvent = timestamps[0];
-    const lastEvent = timestamps[timestamps.length - 1];
-    const spanMinutes = Math.round((lastEvent.getTime() - firstEvent.getTime()) / (1000 * 60));
-    const activeMinutes = Math.min(540, Math.max(60, spanMinutes > 0 ? spanMinutes + 45 : timestamps.length * 30));
-
-    let afterHoursCount = 0;
-    timestamps.forEach((t) => {
-      const hour = t.getHours();
-      if (hour < 9 || hour >= 19) {
-        afterHoursCount++;
-      }
+    // Group real public events by calendar date
+    const eventsByDate = new Map<string, Date[]>();
+    events.forEach((e) => {
+      if (!e.created_at) return;
+      const d = new Date(e.created_at);
+      if (isNaN(d.getTime())) return;
+      const dateStr = d.toISOString().split("T")[0];
+      const list = eventsByDate.get(dateStr) || [];
+      list.push(d);
+      eventsByDate.set(dateStr, list);
     });
-    const afterHoursMinutes = Math.min(180, afterHoursCount * 30);
 
-    return [
-      {
+    // Ensure today is always present in output
+    if (!eventsByDate.has(todayStr)) {
+      eventsByDate.set(todayStr, []);
+    }
+
+    const signals: EmployeeSignal[] = [];
+
+    eventsByDate.forEach((timestamps, dateStr) => {
+      if (timestamps.length === 0) {
+        signals.push({
+          employeeId,
+          date: dateStr,
+          activeMinutes: 0,
+          meetingMinutes: 0,
+          afterHoursMinutes: 0,
+          breakCount: 0,
+          appSwitches: 0,
+          source: "github",
+        });
+        return;
+      }
+
+      timestamps.sort((a, b) => a.getTime() - b.getTime());
+      const firstEvent = timestamps[0];
+      const lastEvent = timestamps[timestamps.length - 1];
+      const spanMinutes = Math.round((lastEvent.getTime() - firstEvent.getTime()) / (1000 * 60));
+      const activeMinutes = Math.min(
+        540,
+        Math.max(15, spanMinutes > 0 ? spanMinutes + 30 : timestamps.length * 20)
+      );
+
+      let afterHoursCount = 0;
+      timestamps.forEach((t) => {
+        const hour = t.getHours();
+        if (hour < 9 || hour >= 19) {
+          afterHoursCount++;
+        }
+      });
+      const afterHoursMinutes = Math.min(180, afterHoursCount * 25);
+
+      signals.push({
         employeeId,
-        date: todayStr,
+        date: dateStr,
         activeMinutes,
         meetingMinutes: 0,
         afterHoursMinutes,
         breakCount: Math.min(6, Math.max(1, Math.floor(activeMinutes / 90))),
-        appSwitches: timestamps.length * 6,
+        appSwitches: timestamps.length * 4,
         source: "github",
-      },
-    ];
+      });
+    });
+
+    return signals;
   } catch (error) {
     if (error instanceof Error && error.message.includes("was not found")) {
       throw error;
@@ -95,11 +126,11 @@ export async function fetchGitHubSignals(
       {
         employeeId,
         date: todayStr,
-        activeMinutes: 45,
+        activeMinutes: 0,
         meetingMinutes: 0,
         afterHoursMinutes: 0,
-        breakCount: 1,
-        appSwitches: 8,
+        breakCount: 0,
+        appSwitches: 0,
         source: "github",
       },
     ];

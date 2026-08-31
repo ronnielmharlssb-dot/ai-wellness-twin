@@ -2,8 +2,7 @@ import type { IntegrationConnection, IntegrationProvider, SyncResult } from "./t
 import { fetchGitHubSignals } from "./githubConnector";
 import { parseCalendarBlocksToSignals, type CalendarEventBlock } from "./calendarConnector";
 import { signalToMetrics } from "../signals/metricsMapper";
-import { getMetricsForEmployee, saveEmployeeMetricsBatch } from "../wellbeing/employeeMetrics";
-import { generateDemoSignal } from "../signals/demoSignalGenerator";
+import { saveEmployeeMetricsBatch } from "../wellbeing/employeeMetrics";
 import type { EmployeeSignal } from "../signals/types";
 
 const INTEGRATIONS_STORAGE_KEY = "wellness-integrations-config";
@@ -189,7 +188,6 @@ export async function syncProvider(
       if (!handle) {
         throw new Error("Please enter your VS Code user or workspace handle.");
       }
-      signals = generateTodayLiveSignal(employeeId, "vscode");
       connectedAccountLabel = handle;
       break;
     }
@@ -199,7 +197,6 @@ export async function syncProvider(
       if (!handle) {
         throw new Error("Please enter your OpenAI / ChatGPT account email.");
       }
-      signals = generateTodayLiveSignal(employeeId, "chatgpt");
       connectedAccountLabel = handle;
       break;
     }
@@ -209,7 +206,6 @@ export async function syncProvider(
       if (!email || !validateGoogleAccount(email)) {
         throw new Error("Google Identity Verification Failed: Please enter an existing, valid Google Account email (e.g. you@gmail.com or you@company.com).");
       }
-      signals = generateTodayLiveSignal(employeeId, "gemini");
       connectedAccountLabel = email;
       break;
     }
@@ -219,7 +215,6 @@ export async function syncProvider(
       if (!handle) {
         throw new Error("Please enter your Anthropic / Claude account email.");
       }
-      signals = generateTodayLiveSignal(employeeId, "claude");
       connectedAccountLabel = handle;
       break;
     }
@@ -232,8 +227,6 @@ export async function syncProvider(
       const rawEvents = (config.calendarEvents as unknown as CalendarEventBlock[]) || [];
       if (rawEvents.length > 0) {
         signals = parseCalendarBlocksToSignals(employeeId, rawEvents);
-      } else {
-        signals = generateTodayLiveSignal(employeeId, "google_calendar");
       }
       connectedAccountLabel = email;
       break;
@@ -244,7 +237,6 @@ export async function syncProvider(
       if (!handle) {
         throw new Error("Please enter your Figma account email or team handle.");
       }
-      signals = generateTodayLiveSignal(employeeId, "figma");
       connectedAccountLabel = handle;
       break;
     }
@@ -254,7 +246,6 @@ export async function syncProvider(
       if (!workspace) {
         throw new Error("Please enter your Slack workspace (e.g. acme.slack.com) or username.");
       }
-      signals = generateTodayLiveSignal(employeeId, "slack");
       connectedAccountLabel = workspace;
       break;
     }
@@ -264,24 +255,12 @@ export async function syncProvider(
       if (!handle || !validateDiscordHandle(handle)) {
         throw new Error("Discord Identity Verification Failed: Please enter a valid Discord username (e.g. alex.dev or alex#1234) and confirm that this account belongs to you.");
       }
-      signals = generateTodayLiveSignal(employeeId, "discord");
       connectedAccountLabel = handle.startsWith("@") ? handle : `@${handle}`;
       break;
     }
   }
 
-  // 1. If this is a new user with no baseline history, bootstrap their 28-day baseline reference profile
-  const existingMetrics = getMetricsForEmployee(employeeId);
-  if (existingMetrics.length < 28) {
-    const historicalBaselineSignals: EmployeeSignal[] = [];
-    for (let i = 28; i >= 1; i--) {
-      historicalBaselineSignals.push(generateDemoSignal(employeeId, i));
-    }
-    const baselineDailyMetrics = historicalBaselineSignals.map(signalToMetrics);
-    saveEmployeeMetricsBatch(baselineDailyMetrics);
-  }
-
-  // 2. Save today's live incoming tool signal on top
+  // Save genuine incoming tool signals if any real events were retrieved
   if (signals.length > 0) {
     const dailyMetrics = signals.map(signalToMetrics);
     saveEmployeeMetricsBatch(dailyMetrics);
@@ -309,55 +288,6 @@ export async function syncProvider(
     provider,
     success: true,
     daysSynced: signals.length,
-    message: `Connected ${connectedAccountLabel}: Live telemetry stream active for today.`,
+    message: `Connected ${connectedAccountLabel}: Live telemetry stream active.`,
   };
-}
-
-function generateTodayLiveSignal(employeeId: string, provider: IntegrationProvider): EmployeeSignal[] {
-  const todayStr = new Date().toISOString().split("T")[0];
-  let activeMinutes = 180; // 3.0 hours default
-  let meetingMinutes = 0;
-  let afterHoursMinutes = 0;
-  let breakCount = 2;
-
-  switch (provider) {
-    case "github":
-    case "vscode":
-      activeMinutes = 210; // 3.5 hours active coding & review
-      breakCount = 3;
-      break;
-    case "google_calendar":
-      activeMinutes = 90;
-      meetingMinutes = 120; // 2.0 hours meeting collaboration
-      break;
-    case "slack":
-    case "discord":
-      activeMinutes = 75; // 1.25 hours active messaging
-      afterHoursMinutes = 15;
-      breakCount = 1;
-      break;
-    case "figma":
-      activeMinutes = 150; // 2.5 hours active design canvas focus
-      breakCount = 2;
-      break;
-    case "chatgpt":
-    case "gemini":
-    case "claude":
-      activeMinutes = 60; // 1.0 hour AI research & cognitive synthesis
-      breakCount = 1;
-      break;
-  }
-
-  return [
-    {
-      employeeId,
-      date: todayStr,
-      activeMinutes,
-      meetingMinutes,
-      afterHoursMinutes,
-      breakCount,
-      appSwitches: 18,
-      source: "imported",
-    },
-  ];
 }

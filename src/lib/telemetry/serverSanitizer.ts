@@ -45,7 +45,19 @@ export type ValidatedHeartbeat = {
   isBreak: boolean;
   isEvening: boolean;
   meetingMinutes: number;
-  source: "workstation" | "ide" | "calendar" | "presence";
+  source:
+    | "workstation"
+    | "ide"
+    | "calendar"
+    | "presence"
+    | "vscode"
+    | "gemini"
+    | "chatgpt"
+    | "claude"
+    | "figma"
+    | "slack"
+    | "discord"
+    | "github";
 };
 
 export function sanitizeAndValidateHeartbeat(
@@ -69,7 +81,7 @@ export function sanitizeAndValidateHeartbeat(
   }
 
   // 2. Validate mandatory metadata fields
-  const employeeId = typeof raw.employeeId === "string" && raw.employeeId.trim() ? raw.employeeId.trim() : "emp-001";
+  const employeeId = typeof raw.employeeId === "string" && raw.employeeId.trim() ? raw.employeeId.trim() : "usr-ronnie";
   const organizationId = typeof raw.organizationId === "string" && raw.organizationId.trim() ? raw.organizationId.trim() : "org_acme_technologies";
   const timestamp = typeof raw.timestamp === "string" && !isNaN(Date.parse(raw.timestamp)) ? raw.timestamp : new Date().toISOString();
 
@@ -86,9 +98,22 @@ export function sanitizeAndValidateHeartbeat(
   const hour = new Date(timestamp).getHours();
   const isEvening = typeof raw.isEvening === "boolean" ? raw.isEvening : hour >= 19 || hour < 6;
 
-  const validSources = new Set(["workstation", "ide", "calendar", "presence"]);
+  const validSources = new Set([
+    "workstation",
+    "ide",
+    "calendar",
+    "presence",
+    "vscode",
+    "gemini",
+    "chatgpt",
+    "claude",
+    "figma",
+    "slack",
+    "discord",
+    "github",
+  ]);
   const source = typeof raw.source === "string" && validSources.has(raw.source)
-    ? (raw.source as "workstation" | "ide" | "calendar" | "presence")
+    ? (raw.source as ValidatedHeartbeat["source"])
     : "workstation";
 
   return {

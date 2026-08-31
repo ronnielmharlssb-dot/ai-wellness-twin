@@ -10,20 +10,14 @@ export type AuthUser = {
 const LOCAL_SESSION_KEY = "wellness-auth-user";
 const REGISTERED_USERS_KEY = "wellness-registered-users";
 
-const DEFAULT_ACCOUNTS: AuthUser[] = [
-  {
-    id: "usr-ronnie-primary",
-    email: "ronnie@company.com",
-    fullName: "Ronnie",
-    role: "hr",
-  },
-  {
-    id: "usr-ronnie-tester",
-    email: "ronnie.tester@company.com",
-    fullName: "Ronnie",
-    role: "employee",
-  },
-];
+export const PRIMARY_USER_ACCOUNT: AuthUser = {
+  id: "usr-ronnie",
+  email: "ronnie@company.com",
+  fullName: "Ronnie",
+  role: "employee",
+};
+
+const DEFAULT_ACCOUNTS: AuthUser[] = [PRIMARY_USER_ACCOUNT];
 
 export function getRegisteredUsers(): AuthUser[] {
   if (typeof window === "undefined") {
@@ -70,20 +64,15 @@ export function findRegisteredUser(email: string): AuthUser | null {
   return users.find((u) => u.email.toLowerCase() === normalized) || null;
 }
 
-export const LIVE_TESTER_ACCOUNT: AuthUser = {
-  id: "usr-live-tester",
-  email: "ronnie.tester@company.com",
-  fullName: "Ronnie (Live Tester)",
-  role: "employee",
-};
+export const LIVE_TESTER_ACCOUNT: AuthUser = PRIMARY_USER_ACCOUNT;
 
 export function loginAsLiveTester(): AuthUser {
   if (typeof window !== "undefined") {
     // Save to registered users and set active session
-    saveRegisteredUser(LIVE_TESTER_ACCOUNT);
-    setLocalSessionUser(LIVE_TESTER_ACCOUNT);
+    saveRegisteredUser(PRIMARY_USER_ACCOUNT);
+    setLocalSessionUser(PRIMARY_USER_ACCOUNT);
   }
-  return LIVE_TESTER_ACCOUNT;
+  return PRIMARY_USER_ACCOUNT;
 }
 
 export function getLocalSessionUser(): AuthUser | null {
@@ -94,13 +83,12 @@ export function getLocalSessionUser(): AuthUser | null {
   try {
     const saved = localStorage.getItem(LOCAL_SESSION_KEY);
     if (!saved) {
-      // Automatically default to clean Live Tester so no login requirement blocks testing
-      setLocalSessionUser(LIVE_TESTER_ACCOUNT);
-      return LIVE_TESTER_ACCOUNT;
+      setLocalSessionUser(PRIMARY_USER_ACCOUNT);
+      return PRIMARY_USER_ACCOUNT;
     }
     return JSON.parse(saved);
   } catch {
-    return LIVE_TESTER_ACCOUNT;
+    return PRIMARY_USER_ACCOUNT;
   }
 }
 

@@ -12,7 +12,7 @@ export function signalToMetrics(
 
     date: signal.date,
 
-    source: "demo",
+    source: (signal.source as EmployeeDailyMetrics["source"]) || "telemetry",
 
     workingHours:
       Number(
@@ -20,7 +20,9 @@ export function signalToMetrics(
       ),
 
     meetingLoad:
-      signal.meetingMinutes,
+      Number(
+        (signal.meetingMinutes / 60).toFixed(1)
+      ),
 
     breakFrequency:
       signal.breakCount,

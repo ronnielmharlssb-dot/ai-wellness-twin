@@ -27,7 +27,7 @@ export default function RecommendationsPage() {
 
   useEffect(() => {
     const user = getLocalSessionUser();
-    const employeeId = user?.id || "emp-001";
+    const employeeId = user?.id || "usr-ronnie";
     const metrics = getMetricsForEmployee(employeeId);
     const assessment = buildEmployeeAssessment(metrics);
     setIsBuilding(assessment.status === "building");

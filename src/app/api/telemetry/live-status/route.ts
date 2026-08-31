@@ -4,7 +4,7 @@ import { getMetricsForEmployee } from "@/lib/wellbeing/employeeMetrics";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const employeeId = searchParams.get("employeeId") || "emp-001";
+    const employeeId = searchParams.get("employeeId") || "usr-ronnie";
     const todayStr = new Date().toISOString().split("T")[0];
 
     const metrics = getMetricsForEmployee(employeeId);

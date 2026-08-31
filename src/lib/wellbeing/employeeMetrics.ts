@@ -96,5 +96,9 @@ export function wipeAllDemoData(): void {
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem("wellness-integrations-config");
   localStorage.removeItem("wellness-registered-users");
+  localStorage.removeItem("wellness-auth-user");
+  localStorage.removeItem("hr-wellbeing-observations");
+  localStorage.removeItem("hr-groups");
+  window.dispatchEvent(new CustomEvent("wellness-telemetry-update"));
 }
 

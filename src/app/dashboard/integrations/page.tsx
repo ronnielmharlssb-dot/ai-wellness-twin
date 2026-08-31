@@ -68,7 +68,7 @@ export default function IntegrationsPage() {
 
     // Listen for live OAuth popup callbacks (Discord, GitHub, Google, Slack)
     const handleOAuthMessage = async (event: MessageEvent) => {
-      const empId = sessionUser?.id || "usr-live-tester";
+      const empId = sessionUser?.id || "usr-ronnie";
 
       if (event.data?.type === "DISCORD_OAUTH_SUCCESS" && event.data?.username) {
         const verifiedUsername = event.data.username;
@@ -239,9 +239,48 @@ export default function IntegrationsPage() {
     }
   };
 
+  const handleDirectLink = async () => {
+    if (!authProvider) return;
+    const targetIdentifier = authAccountInput.trim();
+    if (!targetIdentifier) {
+      setSyncError("Please enter your account email or handle.");
+      return;
+    }
+    const empId = user?.id || "usr-ronnie";
+    try {
+      if (authProvider === "google_calendar") {
+        if (!validateGoogleAccount(targetIdentifier)) {
+          setSyncError("Please enter a valid Google Account email.");
+          return;
+        }
+        await syncProvider("google_calendar", empId, { calendarEmail: targetIdentifier });
+        setIntegrations(getStoredIntegrations());
+        setSyncMessage(`✓ Google Calendar successfully connected & linked to ${targetIdentifier}`);
+        setAuthProvider(null);
+      } else if (authProvider === "gemini") {
+        if (!validateGoogleAccount(targetIdentifier)) {
+          setSyncError("Please enter a valid Google Account email.");
+          return;
+        }
+        await syncProvider("gemini", empId, { workspaceName: targetIdentifier });
+        setIntegrations(getStoredIntegrations());
+        setSyncMessage(`✓ Google Gemini successfully connected & linked to ${targetIdentifier}`);
+        setAuthProvider(null);
+      } else {
+        await syncProvider(authProvider, empId, { workspaceName: targetIdentifier, username: targetIdentifier });
+        setIntegrations(getStoredIntegrations());
+        setSyncMessage(`✓ ${authProvider} successfully linked to ${targetIdentifier}`);
+        setAuthProvider(null);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to link account.";
+      setSyncError(msg);
+    }
+  };
+
   const handleAutoSyncAllWithGoogle = async () => {
-    const employeeId = user?.id || "usr-live-tester";
-    const googleEmail = (inputs.google_calendar || user?.email || "ronnie.tester@company.com").trim();
+    const employeeId = user?.id || "usr-ronnie";
+    const googleEmail = (inputs.google_calendar || user?.email || "ronnie@company.com").trim();
 
     if (!validateGoogleAccount(googleEmail)) {
       setSyncError("Google verification failed: Please enter a verified, existing Google account email.");
@@ -781,6 +820,15 @@ export default function IntegrationsPage() {
                 </Button>
 
                 <Button
+                  variant="outline"
+                  disabled={isAuthenticating || !authAccountInput.trim()}
+                  onClick={handleDirectLink}
+                  className="text-xs border-slate-300 dark:border-slate-700 font-semibold"
+                >
+                  Link & Verify Directly
+                </Button>
+
+                <Button
                   variant="primary"
                   disabled={
                     isAuthenticating ||
@@ -791,7 +839,7 @@ export default function IntegrationsPage() {
                       authProvider !== "gemini")
                   }
                   onClick={handleConfirmOAuth}
-                  className={`text-xs flex items-center gap-2 min-w-[180px] justify-center shadow-sm font-semibold ${
+                  className={`text-xs flex items-center gap-2 min-w-[160px] justify-center shadow-sm font-semibold ${
                     authProvider === "discord"
                       ? "bg-[#5865F2] hover:bg-[#4752C4] text-white"
                       : authProvider === "google_calendar" || authProvider === "gemini"
@@ -808,7 +856,7 @@ export default function IntegrationsPage() {
                     <>
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       <span>
-                        Authorize & Connect {authProvider === "discord" ? "Discord" : authProvider === "google_calendar" ? "Google" : ""}
+                        OAuth Popup
                       </span>
                     </>
                   )}

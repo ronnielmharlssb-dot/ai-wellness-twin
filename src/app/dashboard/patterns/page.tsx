@@ -29,7 +29,7 @@ export default function PatternsPage() {
 
   useEffect(() => {
     const user = getLocalSessionUser();
-    const employeeId = user?.id || "emp-001";
+    const employeeId = user?.id || "usr-ronnie";
     const metrics = getMetricsForEmployee(employeeId);
     const result = buildEmployeeAssessment(metrics);
     setAssessment(result);

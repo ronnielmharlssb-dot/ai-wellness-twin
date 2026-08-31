@@ -137,7 +137,7 @@ class WorkstationTrackerService {
     this.accumulatedActiveSeconds += activeChunk;
 
     const user = getLocalSessionUser();
-    const employeeId = user?.id || "emp-001";
+    const employeeId = user?.id || "usr-ronnie";
     const hour = new Date().getHours();
     const isEvening = hour >= 19 || hour < 6;
 

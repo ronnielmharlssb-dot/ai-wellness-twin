@@ -6,12 +6,14 @@ import {
   GeminiLogo,
   CalendarLogo,
   SlackLogo,
+  GitHubLogo,
 } from "@/components/ui/brand-logos";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { workstationTracker, type TrackerState } from "@/lib/telemetry/workstationTracker";
 import { getMetricsForEmployee } from "@/lib/wellbeing/employeeMetrics";
 import { getStoredIntegrations } from "@/lib/integrations/syncEngine";
+import { getToolMinutesToday } from "@/lib/telemetry/telemetryAggregator";
 import { Activity, ShieldCheck, Monitor } from "lucide-react";
 
 interface ToolActivityProps {
@@ -48,13 +50,13 @@ export function ToolActivityBreakdown({ employeeId }: ToolActivityProps) {
   const metrics = getMetricsForEmployee(employeeId);
   const todayMetric = metrics.find((m) => m.date === todayStr);
 
-  const totalWorkingHours = todayMetric ? todayMetric.workingHours : 0;
   const meetingHours = todayMetric ? todayMetric.meetingLoad : 0;
   const afterHoursMins = todayMetric ? todayMetric.afterHoursActivity : 0;
   const workstationActiveMins = Math.floor(trackerState.todayActiveSeconds / 60);
 
   const connectedTools = getStoredIntegrations().filter((i) => i.connected);
 
+  const githubConnected = connectedTools.some((t) => t.provider === "github");
   const vscodeConnected = connectedTools.some((t) => t.provider === "vscode");
   const geminiConnected = connectedTools.some((t) => t.provider === "gemini");
   const calendarConnected = connectedTools.some((t) => t.provider === "google_calendar");
@@ -62,36 +64,56 @@ export function ToolActivityBreakdown({ employeeId }: ToolActivityProps) {
 
   const calendarMinutes = Math.round(meetingHours * 60);
 
+  const toolMinutesToday = getToolMinutesToday();
+  const rawVsCodeMins = toolMinutesToday["vscode"] || toolMinutesToday["ide"] || 0;
+  const rawGeminiMins = toolMinutesToday["gemini"] || toolMinutesToday["ai"] || 0;
+
   // Pure recorded minutes (Starts at 0m and increments strictly with genuine telemetry)
-  const vscodeMinutes = vscodeConnected ? Math.round((totalWorkingHours - meetingHours) * 60) : 0;
-  const geminiMinutes = geminiConnected ? Math.round((totalWorkingHours - meetingHours) * 60) : 0;
+  const githubMinutes = githubConnected && todayMetric?.source === "github" ? Math.round(todayMetric.workingHours * 60) : 0;
+  const vscodeMinutes = vscodeConnected ? Math.round(workstationActiveMins + rawVsCodeMins) : 0;
+  const geminiMinutes = geminiConnected ? Math.round(rawGeminiMins) : 0;
   const slackMinutes = slackConnected ? afterHoursMins : 0;
 
   const toolCards = [
+    {
+      id: "github",
+      name: "GitHub",
+      logo: <GitHubLogo className="h-6 w-6" />,
+      category: "Code & Commits",
+      minutes: githubMinutes,
+      label: "Active Commit Window",
+      unit: "mins",
+      status: githubConnected ? "Live API Synced" : "Not Linked",
+      color: "border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-[#1e1e1c]",
+      badgeColor: githubConnected
+        ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+        : "bg-slate-100 text-slate-500 dark:bg-[#20201e] dark:text-slate-400",
+      detail: "Live commit & PR review timestamps from public activity",
+    },
     {
       id: "vscode",
       name: "Visual Studio Code",
       logo: <VSCodeLogo className="h-6 w-6" />,
       category: "Code & Engineering",
       minutes: vscodeMinutes,
-      label: "Active Coding Focus",
+      label: "Active Focus Session",
       unit: "mins",
       status: vscodeConnected ? "Ingesting Telemetry" : "Not Linked",
       color: "border-sky-200 dark:border-sky-900/60 bg-sky-50/40 dark:bg-sky-950/20",
       badgeColor: vscodeConnected
         ? "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-[#60cdff]"
         : "bg-slate-100 text-slate-500 dark:bg-[#20201e] dark:text-slate-400",
-      detail: "Active IDE session focus duration & commit rhythm",
+      detail: "Active workstation focus time & typing interaction",
     },
     {
       id: "gemini",
       name: "Google Gemini",
       logo: <GeminiLogo className="h-6 w-6" />,
-      category: "AI Research & Analysis",
+      category: "AI Research & Synthesis",
       minutes: geminiMinutes,
-      label: "AI Research & Consultation",
+      label: "AI Consultation Time",
       unit: "mins",
-      status: geminiConnected ? "Ingesting Telemetry" : "Not Linked",
+      status: geminiConnected ? "Live Telemetry" : "Not Linked",
       color: "border-purple-200 dark:border-purple-900/60 bg-purple-50/40 dark:bg-purple-950/20",
       badgeColor: geminiConnected
         ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
@@ -119,7 +141,7 @@ export function ToolActivityBreakdown({ employeeId }: ToolActivityProps) {
       logo: <SlackLogo className="h-6 w-6" />,
       category: "Team Communication",
       minutes: slackMinutes,
-      label: "Collaboration & Evening Window",
+      label: "Evening Activity Window",
       unit: "mins",
       status: slackConnected ? "Synced via Cloud" : "Not Linked",
       color: "border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/40 dark:bg-indigo-950/20",

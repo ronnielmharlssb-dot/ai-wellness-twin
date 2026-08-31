@@ -10,6 +10,7 @@ import {
 } from "@/lib/wellbeing/employeeAssessment";
 import { getMetricsForEmployee } from "@/lib/wellbeing/employeeMetrics";
 import { formatChange, metricLabels } from "@/lib/wellbeing/formatters";
+import { getLocalSessionUser } from "@/lib/supabase/auth";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -25,7 +26,8 @@ export default function SimulatorPage() {
   const [result, setResult] = useState<EmployeeAssessment | null>(null);
 
   function runSimulation() {
-    const history = getMetricsForEmployee("emp-001");
+    const user = getLocalSessionUser();
+    const history = getMetricsForEmployee(user?.id || "usr-ronnie");
 
     if (history.length === 0) {
       return;

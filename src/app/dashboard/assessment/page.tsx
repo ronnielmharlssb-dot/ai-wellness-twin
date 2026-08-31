@@ -35,8 +35,8 @@ export default function AssessmentPage() {
     useState<EmployeeAssessment | null>(null);
 
   useEffect(() => {
-    const user = getLocalSessionUser();
-    const employeeId = user?.id || "emp-001";
+    const sessionUser = getLocalSessionUser();
+    const employeeId = sessionUser?.id || "usr-ronnie";
     const metrics = getMetricsForEmployee(employeeId);
     const result = buildEmployeeAssessment(metrics);
     setAssessment(result);

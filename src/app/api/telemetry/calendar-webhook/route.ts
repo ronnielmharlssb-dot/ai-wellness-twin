@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       : 30; // Default 30 min block if unprovided
 
     const payload = {
-      employeeId: rawBody.employeeId || clientState || "emp-001",
+      employeeId: rawBody.employeeId || clientState || "usr-ronnie",
       organizationId: rawBody.organizationId || "org_acme_technologies",
       timestamp: new Date().toISOString(),
       activeSeconds: 0,
