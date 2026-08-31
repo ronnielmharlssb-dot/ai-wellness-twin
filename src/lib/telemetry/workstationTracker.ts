@@ -20,8 +20,54 @@ class WorkstationTrackerService {
   private lastActivityTimestamp = Date.now();
   private lastAwayTimestamp: number | null = null;
   private hasPendingBreak = false;
+  private todayBreaks = 0;
 
   private stateListeners: Set<(state: TrackerState) => void> = new Set();
+
+  constructor() {
+    this.loadStateFromStorage();
+  }
+
+  private loadStateFromStorage() {
+    if (typeof window === "undefined") return;
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      const saved = localStorage.getItem("wellness-workstation-tracker-state");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.date === todayStr && typeof parsed.seconds === "number") {
+          this.accumulatedActiveSeconds = parsed.seconds;
+          this.todayBreaks = parsed.breaks || 0;
+          if (parsed.lastActivityTimestamp) {
+            this.lastActivityTimestamp = parsed.lastActivityTimestamp;
+          }
+          return;
+        }
+      }
+    } catch {
+      // ignore parsing error
+    }
+    this.accumulatedActiveSeconds = 0;
+    this.todayBreaks = 0;
+  }
+
+  private saveStateToStorage() {
+    if (typeof window === "undefined") return;
+    try {
+      const todayStr = new Date().toISOString().split("T")[0];
+      localStorage.setItem(
+        "wellness-workstation-tracker-state",
+        JSON.stringify({
+          date: todayStr,
+          seconds: this.accumulatedActiveSeconds,
+          breaks: this.todayBreaks,
+          lastActivityTimestamp: this.lastActivityTimestamp,
+        })
+      );
+    } catch {
+      // ignore storage error
+    }
+  }
 
   public subscribe(listener: (state: TrackerState) => void) {
     this.stateListeners.add(listener);
@@ -41,7 +87,7 @@ class WorkstationTrackerService {
       isRunning: this.isRunning,
       isPaused: this.isPaused,
       todayActiveSeconds: this.accumulatedActiveSeconds,
-      todayBreaks: this.hasPendingBreak ? 1 : 0,
+      todayBreaks: this.todayBreaks + (this.hasPendingBreak ? 1 : 0),
       lastHeartbeatSentAt: new Date(this.lastActivityTimestamp).toISOString(),
       activeFocusStreakSeconds: this.accumulatedActiveSeconds,
     };
@@ -50,6 +96,7 @@ class WorkstationTrackerService {
   public start() {
     if (this.isRunning || typeof window === "undefined") return;
 
+    this.loadStateFromStorage();
     this.isRunning = true;
     this.isPaused = false;
     this.lastActivityTimestamp = Date.now();
@@ -61,8 +108,7 @@ class WorkstationTrackerService {
     window.addEventListener("pointerdown", this.handleUserPresence);
     window.addEventListener("keydown", this.handleUserPresence);
 
-    // 2. Dispatch immediate initial handshake heartbeat, then start dispatch loop
-    this.tickAndDispatch();
+    // 2. Start regular dispatch loop
     this.timer = setInterval(() => {
       this.tickAndDispatch();
     }, 45000); // 45-second heartbeat cycle
@@ -135,6 +181,11 @@ class WorkstationTrackerService {
 
     const activeChunk = 60; // 60 seconds
     this.accumulatedActiveSeconds += activeChunk;
+    if (this.hasPendingBreak) {
+      this.todayBreaks += 1;
+    }
+    this.lastActivityTimestamp = Date.now();
+    this.saveStateToStorage();
 
     const user = getLocalSessionUser();
     const employeeId = user?.id || "usr-ronnie";
