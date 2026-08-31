@@ -10,7 +10,6 @@ import { LiveTelemetryIndicator } from "@/components/ui/live-telemetry-indicator
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
 import { Settings, ShieldCheck, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { getLocalSessionUser } from "@/lib/supabase/auth";
-import { Button } from "@/components/ui/button";
 
 const SIDEBAR_COLLAPSED_KEY = "wellness-sidebar-collapsed";
 
@@ -72,15 +71,15 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#20201e] transition-colors duration-300">
-      <div className="flex min-h-screen">
-        {/* Collapsible Desktop Sidebar */}
+    <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#20201e] transition-colors duration-300 p-3 sm:p-4 md:p-5">
+      <div className="flex gap-4 md:gap-5 min-h-[calc(100vh-2.5rem)]">
+        {/* Indented Floating Desktop Sidebar */}
         <aside
-          className={`hidden shrink-0 border-r border-slate-200 bg-white dark:border-[#383734] dark:bg-[#2c2b28] md:flex md:flex-col sticky top-0 h-screen overflow-y-auto transition-all duration-300 ease-in-out ${
+          className={`hidden shrink-0 rounded-3xl border border-slate-200/90 bg-white dark:border-[#383734] dark:bg-[#2c2b28] md:flex md:flex-col sticky top-4 md:top-5 h-[calc(100vh-2.5rem)] overflow-y-auto shadow-sm transition-all duration-300 ease-in-out ${
             isCollapsed ? "w-[72px]" : "w-64"
           }`}
         >
-          <div className="flex h-full flex-col justify-between p-3.5">
+          <div className="flex h-full flex-col justify-between p-4">
             <div>
               {/* Brand & Collapse Toggle */}
               <div className="mb-6 flex items-center justify-between">
@@ -108,7 +107,7 @@ export default function DashboardLayout({
                     type="button"
                     onClick={toggleSidebar}
                     title="Collapse sidebar"
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#383734] dark:hover:text-slate-200 transition-colors shrink-0"
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#383734] dark:hover:text-slate-200 transition-colors shrink-0 cursor-pointer"
                   >
                     <PanelLeftClose className="h-4 w-4" />
                   </button>
@@ -122,7 +121,7 @@ export default function DashboardLayout({
                     type="button"
                     onClick={toggleSidebar}
                     title="Expand sidebar"
-                    className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#383734] dark:hover:text-slate-200 transition-colors"
+                    className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#383734] dark:hover:text-slate-200 transition-colors cursor-pointer"
                   >
                     <PanelLeftOpen className="h-4 w-4" />
                   </button>
@@ -138,20 +137,24 @@ export default function DashboardLayout({
               <Link
                 href="/settings"
                 title={isCollapsed ? "Settings" : undefined}
-                className={`flex items-center rounded-xl text-xs font-medium text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 dark:text-[#a6a6a6] dark:hover:bg-[#353430] dark:hover:text-white ${
-                  isCollapsed ? "h-11 w-11 justify-center mx-auto" : "gap-3 px-3 py-2.5"
-                }`}
+                className={`flex shrink-0 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
+                  isCollapsed ? "h-10 w-10 justify-center mx-auto" : ""
+                } text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80 dark:hover:text-white`}
               >
-                <Settings className="h-4 w-4 text-slate-400 dark:text-[#9a9893] shrink-0" />
-                {!isCollapsed && <span>Settings</span>}
+                <div className="flex items-center gap-2.5">
+                  <span className="text-slate-400 dark:text-slate-500">
+                    <Settings className="h-4 w-4 shrink-0" />
+                  </span>
+                  {!isCollapsed && <span className="whitespace-nowrap">Settings</span>}
+                </div>
               </Link>
             </div>
           </div>
         </aside>
 
         {/* Main Content Area */}
-        <div className="min-w-0 flex-1">
-          <header className="relative flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 dark:border-[#383734] dark:bg-[#2c2b28] transition-colors duration-300">
+        <div className="min-w-0 flex-1 flex flex-col">
+          <header className="relative flex h-16 items-center justify-between rounded-2xl border border-slate-200/90 bg-white px-4 sm:px-6 dark:border-[#383734] dark:bg-[#2c2b28] shadow-sm mb-4 md:mb-5 transition-colors duration-300">
             <div className="flex items-center gap-3">
               <MobileNav />
 
@@ -160,7 +163,7 @@ export default function DashboardLayout({
                 type="button"
                 onClick={toggleSidebar}
                 title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                className="hidden md:flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#383734] dark:hover:text-slate-200 transition-colors"
+                className="hidden md:flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#383734] dark:hover:text-slate-200 transition-colors cursor-pointer"
               >
                 {isCollapsed ? (
                   <PanelLeftOpen className="h-4 w-4 text-sky-600 dark:text-[#60cdff]" />
@@ -180,7 +183,7 @@ export default function DashboardLayout({
             </div>
           </header>
 
-          <main className="p-4 sm:p-6 lg:p-8">
+          <main className="flex-1">
             {children}
           </main>
         </div>
