@@ -176,48 +176,47 @@ export default function LoginPage() {
           </Button>
 
           {/* Quick Demo Test Accounts */}
-          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3 dark:border-[#383734] dark:bg-[#20201e]/60">
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-2">
-              🧪 Quick Demo Accounts:
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3 dark:border-[#383734] dark:bg-[#20201e]/60 space-y-2">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              🧪 Instant Demo Accounts:
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => handleQuickLogin("employee")}
-                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2.5 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500 cursor-pointer active:scale-95"
+                onClick={handleCalibratedDemoLogin}
+                className="flex flex-col items-start rounded-xl border border-sky-300 bg-sky-50/70 p-2.5 text-left transition hover:border-sky-400 hover:bg-sky-100/70 dark:border-sky-800/80 dark:bg-sky-950/40 dark:hover:border-sky-700 cursor-pointer active:scale-95 shadow-sm"
               >
-                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-                  👤 Employee (Organic)
+                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-[#60cdff]">
+                  👤 Employee (Instant)
                 </span>
                 <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
-                  ronnie@company.com
+                  demo@company.com
                 </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleQuickLogin("hr")}
-                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2.5 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500 cursor-pointer active:scale-95"
+                className="flex flex-col items-start rounded-xl border border-slate-200 bg-white p-2.5 text-left transition hover:border-slate-400 hover:bg-slate-50 dark:border-[#383734] dark:bg-[#2c2b28] dark:hover:border-slate-500 cursor-pointer active:scale-95 shadow-sm"
               >
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                  🛡️ HR Admin
+                  🛡️ HR Admin (Instant)
                 </span>
                 <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
                   hr@company.com
                 </span>
               </button>
+            </div>
 
+            {/* Organic Ronnie Account Quick Link */}
+            <div className="flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-[#383734]/50 text-[10px]">
+              <span className="text-slate-400 dark:text-slate-500">Day 1 Organic baseline:</span>
               <button
                 type="button"
-                onClick={handleCalibratedDemoLogin}
-                className="flex flex-col items-start rounded-xl border border-amber-300 bg-amber-50/70 p-2.5 text-left transition hover:border-amber-400 hover:bg-amber-100/70 dark:border-amber-800/80 dark:bg-amber-950/40 dark:hover:border-amber-700 cursor-pointer active:scale-95"
+                onClick={() => handleQuickLogin("employee")}
+                className="font-semibold text-sky-600 hover:underline dark:text-[#60cdff] cursor-pointer"
               >
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
-                  ⚡ 28-Day Calibrated
-                </span>
-                <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
-                  demo@company.com
-                </span>
+                Log in as ronnie@company.com →
               </button>
             </div>
           </div>
