@@ -4,7 +4,7 @@ const THEME_KEY = "wellness-theme-preference";
 
 export function getStoredThemePreference(): ThemeMode {
   if (typeof window === "undefined") {
-    return "dark";
+    return "light";
   }
 
   try {
@@ -12,9 +12,9 @@ export function getStoredThemePreference(): ThemeMode {
     if (saved === "light" || saved === "dark" || saved === "system") {
       return saved;
     }
-    return "dark";
+    return "light";
   } catch {
-    return "dark";
+    return "light";
   }
 }
 

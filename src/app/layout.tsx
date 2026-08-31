@@ -41,13 +41,13 @@ export const metadata: Metadata = {
 const themeInitScript = `
   try {
     const saved = localStorage.getItem('wellness-theme-preference');
-    if (saved === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else {
+    if (saved === 'dark') {
       document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
   } catch (_) {
-    document.documentElement.classList.add('dark');
+    document.documentElement.classList.remove('dark');
   }
 `;
 

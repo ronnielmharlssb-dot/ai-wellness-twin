@@ -66,7 +66,7 @@ export const DEFAULT_USER_SETTINGS: UserSettingsState = {
     timezone: "UTC+08:00 (Singapore / Manila)",
   },
   appearance: {
-    themeMode: "dark",
+    themeMode: "light",
     uiDensity: "comfortable",
     highContrastIndicators: false,
     reducedMotion: false,

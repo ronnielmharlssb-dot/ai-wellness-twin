@@ -82,7 +82,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [settings, setSettings] = useState<UserSettingsState>(getUserSettings());
-  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isTrackerRunning, setIsTrackerRunning] = useState(true);
