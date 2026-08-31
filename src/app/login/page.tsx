@@ -183,14 +183,14 @@ export default function LoginPage() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={handleCalibratedDemoLogin}
+                onClick={() => handleQuickLogin("employee")}
                 className="flex flex-col items-start rounded-xl border border-sky-300 bg-sky-50/70 p-2.5 text-left transition hover:border-sky-400 hover:bg-sky-100/70 dark:border-sky-800/80 dark:bg-sky-950/40 dark:hover:border-sky-700 cursor-pointer active:scale-95 shadow-sm"
               >
                 <span className="text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-[#60cdff]">
                   👤 Employee (Instant)
                 </span>
                 <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">
-                  demo@company.com
+                  ronnie@company.com
                 </span>
               </button>
 
@@ -208,15 +208,15 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* Organic Ronnie Account Quick Link */}
+            {/* Calibrated 28-Day Baseline Demo Account Quick Link */}
             <div className="flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-[#383734]/50 text-[10px]">
-              <span className="text-slate-400 dark:text-slate-500">Day 1 Organic baseline:</span>
+              <span className="text-slate-400 dark:text-slate-500">28-Day Calibrated Demo:</span>
               <button
                 type="button"
-                onClick={() => handleQuickLogin("employee")}
-                className="font-semibold text-sky-600 hover:underline dark:text-[#60cdff] cursor-pointer"
+                onClick={handleCalibratedDemoLogin}
+                className="font-semibold text-amber-600 hover:underline dark:text-amber-400 cursor-pointer"
               >
-                Log in as ronnie@company.com →
+                Log in as demo@company.com →
               </button>
             </div>
           </div>
