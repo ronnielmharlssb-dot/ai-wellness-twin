@@ -92,7 +92,7 @@ AI Wellness Twin enforces **strict, bi-directional role isolation**:
 | :--- | :--- | :--- |
 | **Primary Route** | `/dashboard` | `/hr` |
 | **Access Boundary** | Strictly restricted to personal data; zero access to `/hr` routes. | Strictly restricted to aggregated team views; zero access to `/dashboard`. |
-| **Data Visibility** | Raw individual telemetry, personal surveys, AI twin score, simulator. | Anonymized group health indices, macro department shifts ($k \ge 3$). |
+| **Data Visibility** | Raw individual telemetry, personal surveys, AI twin score, weekly reports. | Anonymized group health indices, macro department shifts ($k \ge 3$). |
 | **Account Management** | Personal profile, integration API tokens, theme density. | Organization verification, team creation, single-use invite generator. |
 
 ---
@@ -112,17 +112,13 @@ AI Wellness Twin enforces **strict, bi-directional role isolation**:
 - Standardized Maslach Burnout Inventory (MBI-GS) validated questionnaires.
 - Daily subjective pulse logs to cross-correlate subjective feelings with objective telemetry.
 
-### 4. "What-If" Twin Simulator (`/dashboard/simulator`)
-- Interactive parameter sliders: Adjust meeting hours, after-hours commits, and break frequency.
-- Real-time simulation algorithm computing the projected burnout risk and recovery trajectory over 14–28 days.
-
-### 5. Personalized Recommendations (`/dashboard/recommendations`)
+### 4. Personalized Recommendations (`/dashboard/recommendations`)
 - AI-tailored micro-habits (e.g., "Schedule a 25-minute buffer before 3 PM syncs", "Enable GitHub notification curfew").
 
-### 6. Personal Weekly Reports (`/dashboard/reports`)
+### 5. Personal Weekly Reports (`/dashboard/reports`)
 - Automated retrospective reports detailing weekly shifts compared against the user's historical 28-day baseline.
 
-### 7. Integrations Manager (`/dashboard/integrations`)
+### 6. Integrations Manager (`/dashboard/integrations`)
 - Cloud and workstation connector hub for GitHub, VS Code, ChatGPT, Gemini, Claude, Google Calendar, Figma, Slack, and Discord.
 
 ---

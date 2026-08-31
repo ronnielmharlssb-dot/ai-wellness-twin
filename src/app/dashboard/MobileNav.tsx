@@ -9,7 +9,6 @@ import {
   Sparkles,
   Lightbulb,
   FileText,
-  Sliders,
   Layers,
   Settings,
   Menu,
@@ -36,11 +35,6 @@ const navItems = [
     href: "/dashboard/recommendations",
     label: "Recommendations",
     icon: <Lightbulb className="h-4 w-4 shrink-0" />,
-  },
-  {
-    href: "/dashboard/simulator",
-    label: "Twin Simulator",
-    icon: <Sliders className="h-4 w-4 shrink-0" />,
   },
   {
     href: "/dashboard/reports",
