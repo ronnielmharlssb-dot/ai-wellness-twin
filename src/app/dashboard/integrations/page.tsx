@@ -149,6 +149,8 @@ export default function IntegrationsPage() {
     setSyncError(null);
 
     try {
+      let popupWindow: Window | null = null;
+
       // 1. Google OAuth Credential Challenge
       if (authProvider === "google_calendar" || authProvider === "gemini") {
         const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "689138092583-fp6lg714c06ljm65qf5bl9js51japv79.apps.googleusercontent.com";
@@ -167,20 +169,16 @@ export default function IntegrationsPage() {
           googleAuthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${redirectUri}`;
         }
 
-        window.open(googleAuthUrl, "GoogleAuth", "width=500,height=700");
-        return;
+        popupWindow = window.open(googleAuthUrl, "GoogleAuth", "width=500,height=700");
       }
 
       // 3. Discord OAuth Credential Challenge
-      const discordClientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1542876397973020692";
-      if (authProvider === "discord") {
+      else if (authProvider === "discord") {
+        const discordClientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1542876397973020692";
         const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/callback/discord`);
         const oauthUrl = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify&prompt=consent`;
-        window.open(oauthUrl, "DiscordAuth", "width=500,height=750");
-        return;
+        popupWindow = window.open(oauthUrl, "DiscordAuth", "width=500,height=750");
       }
-
-      let popupWindow: Window | null = null;
 
       // 4. GitHub OAuth Credential Challenge
       if (authProvider === "github") {
