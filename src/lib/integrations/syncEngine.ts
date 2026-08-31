@@ -15,9 +15,10 @@ export const DEFAULT_INTEGRATIONS: IntegrationConnection[] = [
     name: "GitHub",
     category: "Code & Development",
     description: "Observes commit and PR review timestamps to measure active development hours and evening coding patterns.",
-    connected: false,
+    connected: true,
     config: {
-      username: "",
+      username: "ronnielmharlssb-dot",
+      accountLabel: "github.com/ronnielmharlssb-dot",
     },
   },
   {
@@ -26,9 +27,10 @@ export const DEFAULT_INTEGRATIONS: IntegrationConnection[] = [
     name: "Visual Studio Code",
     category: "Code & Development",
     description: "Observes editor focus time, coding session durations, and micro-pauses without reading source code.",
-    connected: false,
+    connected: true,
     config: {
-      workspaceName: "",
+      workspaceName: "ai-wellness-twin",
+      accountLabel: "ai-wellness-twin workspace",
     },
   },
 

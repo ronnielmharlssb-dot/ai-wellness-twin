@@ -80,9 +80,12 @@ export function ToolActivityBreakdown({ employeeId }: ToolActivityProps) {
   const rawClaudeMins = toolMinutesToday["claude"] || 0;
   const rawFigmaMins = toolMinutesToday["figma"] || 0;
   const rawDiscordMins = toolMinutesToday["discord"] || 0;
+  const rawGitHubMins = toolMinutesToday["github"] || 0;
 
-  // Pure recorded minutes (Starts at 0m and increments strictly with genuine telemetry)
-  const githubMinutes = githubConnected && todayMetric?.source === "github" ? Math.round(todayMetric.workingHours * 60) : 0;
+  // Pure recorded minutes (Synchronized with active development, commits, and genuine telemetry)
+  const githubMinutes = githubConnected
+    ? Math.max(workstationActiveMins, Math.round(rawGitHubMins), todayMetric?.source === "github" ? Math.round(todayMetric.workingHours * 60) : 0)
+    : 0;
   const vscodeMinutes = vscodeConnected ? Math.round(workstationActiveMins + rawVsCodeMins) : 0;
   const chatgptMinutes = chatgptConnected ? Math.round(rawChatGptMins) : 0;
   const geminiMinutes = geminiConnected ? Math.round(rawGeminiMins) : 0;
