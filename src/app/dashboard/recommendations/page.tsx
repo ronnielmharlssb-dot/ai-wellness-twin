@@ -66,38 +66,38 @@ export default function RecommendationsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      {/* Header & Breadcrumb */}
+      {/* Header & Breadcrumb matching Settings */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 dark:text-[#9a9893]">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 dark:text-slate-400">
             <Link href="/dashboard" className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
               Dashboard
             </Link>
-            <span>›</span>
-            <span className="text-slate-700 dark:text-slate-200">Recommendations</span>
+            <ChevronRight className="h-3 w-3" />
+            <span className="text-slate-700 dark:text-slate-300">Recommendations</span>
           </div>
 
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">
             Personalized Recommendations
           </h1>
 
-          <p className="mt-1 text-xs text-slate-500 dark:text-[#a6a6a6] max-w-2xl">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Gentle, non-prescriptive nudges tailored to shifts observed in your recent work patterns.
           </p>
         </div>
 
         <Link href="/dashboard">
-          <Button variant="outline" className="text-xs shrink-0 border-slate-200 dark:border-[#383734]">
+          <Button variant="outline" className="text-xs">
             ← Back to Dashboard
           </Button>
         </Link>
       </div>
 
-      {/* Two-Column Settings-Style Recommendations Layout */}
+      {/* Tabbed Layout Container matching Settings */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left Category Tabs Navigation */}
-        <div className="space-y-1.5 lg:col-span-3.5">
-          <nav className="flex flex-row gap-1.5 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
+        {/* Settings-style Sidebar Tabs Card */}
+        <div className="lg:col-span-3">
+          <div className="flex flex-row overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0 gap-1.5 rounded-2xl border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900/90 shadow-sm">
             {[
               { id: "all", label: "All Suggestions", icon: Lightbulb },
               { id: "focus", label: "Focus & Pacing", icon: Clock },
@@ -111,75 +111,77 @@ export default function RecommendationsPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as RecTab)}
-                  className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-200 shrink-0 text-left cursor-pointer ${
+                  className={`flex shrink-0 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
                     active
                       ? "bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-[#cfcfce] dark:hover:bg-[#353430] dark:hover:text-white"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
                   }`}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span>{tab.label}</span>
+                  <div className="flex items-center gap-2.5">
+                    <span className={active ? "text-white dark:text-slate-900" : "text-slate-400 dark:text-slate-500"}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="whitespace-nowrap">{tab.label}</span>
+                  </div>
                 </button>
               );
             })}
-          </nav>
+          </div>
 
           {/* Quick Tip Card */}
-          <Card className="hidden lg:block border-slate-200 bg-slate-50/70 p-4 dark:border-[#383734] dark:bg-[#20201e]/60 mt-4">
+          <div className="mt-4 hidden lg:block rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900/60 shadow-sm">
             <div className="flex items-center gap-2">
               <HeartHandshake className="h-4 w-4 text-sky-500 shrink-0" />
-              <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Supportive, Not Prescriptive
-              </h3>
+              <p className="font-semibold text-slate-900 dark:text-slate-200">Supportive Nudges</p>
             </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-[#a6a6a6]">
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
               These suggestions are micro-habits to experiment with. Pick one that resonates with your workday style!
             </p>
-          </Card>
+          </div>
         </div>
 
         {/* Right Content Panel */}
-        <div className="lg:col-span-8.5 space-y-4">
+        <div className="lg:col-span-9 space-y-6">
           {isBuilding ? (
-            <Card className="border-slate-200 bg-white p-8 text-center dark:border-[#383734] dark:bg-[#2c2b28] shadow-sm">
+            <Card className="p-8 text-center">
               <Sparkles className="mx-auto h-8 w-8 text-amber-500 animate-pulse" />
-              <p className="mt-3 text-base font-bold text-slate-900 dark:text-white">
+              <p className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100">
                 Personal Baseline Calibration in Progress
               </p>
-              <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-slate-500 dark:text-[#a6a6a6]">
+              <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                 Personalized recommendations activate automatically once shifts in your 28-day baseline are detected.
               </p>
             </Card>
           ) : filteredRecs.length === 0 ? (
-            <Card className="border-slate-200 bg-white p-8 text-center dark:border-[#383734] dark:bg-[#2c2b28] shadow-sm">
+            <Card className="p-8 text-center">
               <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-500" />
-              <p className="mt-3 text-base font-bold text-slate-900 dark:text-white">
+              <p className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100">
                 Your Work Pacing is Balanced
               </p>
-              <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-slate-500 dark:text-[#a6a6a6]">
+              <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                 Your recent work rhythms closely match your typical baseline. No special pacing adjustments needed right now!
               </p>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {filteredRecs.map((rec) => {
                 const isDone = completedTitles.has(rec.title);
                 return (
                   <Card
                     key={rec.title}
-                    className={`border p-5 transition-all duration-200 shadow-sm ${
+                    className={`p-6 transition-all duration-200 ${
                       isDone
                         ? "border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/20"
-                        : "border-slate-200 bg-white dark:border-[#383734] dark:bg-[#2c2b28]"
+                        : ""
                     }`}
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-1.5">
-                        <h3 className={`text-sm font-bold ${isDone ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-white"}`}>
+                        <h3 className={`text-base font-bold ${isDone ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-slate-100"}`}>
                           {rec.title}
                         </h3>
 
-                        <p className="text-xs leading-relaxed text-slate-600 dark:text-[#cfcfce]">
+                        <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                           {rec.reason}
                         </p>
 

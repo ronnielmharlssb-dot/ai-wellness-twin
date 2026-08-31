@@ -63,18 +63,20 @@ export default function DashboardNav({ collapsed = false }: DashboardNavProps) {
             href={item.href}
             title={collapsed ? item.label : undefined}
             aria-current={active ? "page" : undefined}
-            className={`flex items-center rounded-xl text-sm font-medium transition-all duration-200 ease-out ${
-              collapsed
-                ? "h-11 w-11 justify-center mx-auto"
-                : "gap-3 px-3 py-2.5"
+            className={`flex shrink-0 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
+              collapsed ? "h-10 w-10 justify-center mx-auto" : ""
             } ${
               active
-                ? "bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-[#cfcfce] dark:hover:bg-[#353430] dark:hover:text-white"
+                ? "bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80 dark:hover:text-white"
             }`}
           >
-            <Icon className="h-4 w-4 shrink-0 transition-transform duration-200" />
-            {!collapsed && <span className="truncate">{item.label}</span>}
+            <div className="flex items-center gap-2.5">
+              <span className={active ? "text-white dark:text-slate-900" : "text-slate-400 dark:text-slate-500"}>
+                <Icon className="h-4 w-4 shrink-0" />
+              </span>
+              {!collapsed && <span className="whitespace-nowrap truncate">{item.label}</span>}
+            </div>
           </Link>
         );
       })}
