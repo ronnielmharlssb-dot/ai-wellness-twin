@@ -1,25 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Calendar,
   CheckCircle2,
-  Clock,
-  Plus,
   Sparkles,
-  Coffee,
-  Moon,
   ShieldCheck,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  saveEmployeeMetrics,
   getMetricsForEmployee,
 } from "@/lib/wellbeing/employeeMetrics";
 import { getStoredIntegrations } from "@/lib/integrations/syncEngine";
-import type { EmployeeDailyMetrics } from "@/lib/wellbeing/employeeTypes";
 
 interface BaselineSuiteProps {
   employeeId: string;
@@ -34,15 +27,6 @@ export function BaselineCalibrationSuite({
   requiredDays = 28,
   onMetricsUpdated,
 }: BaselineSuiteProps) {
-  const [showLogModal, setShowLogModal] = useState(false);
-  const [logDate, setLogDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [workingHours, setWorkingHours] = useState(8);
-  const [meetingLoad, setMeetingLoad] = useState(3.5);
-  const [breakFrequency, setBreakFrequency] = useState(5);
-  const [afterHoursActivity, setAfterHoursActivity] = useState(15);
-  const [dayFeeling, setDayFeeling] = useState<"energized" | "balanced" | "fatigued" | "drained">("balanced");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   // Listen for real-time telemetry updates from browser tracker and integrations
   useEffect(() => {
     const handleTelemetryEvent = () => {
@@ -113,26 +97,6 @@ export function BaselineCalibrationSuite({
       ? (existingMetrics.reduce((acc, m) => acc + m.breakFrequency, 0) / existingMetrics.length).toFixed(1)
       : "0";
 
-  const handleSaveDailyMetric = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    const newMetric: EmployeeDailyMetrics = {
-      employeeId,
-      date: logDate,
-      source: "manual",
-      workingHours: Number(workingHours),
-      meetingLoad: Number(meetingLoad),
-      breakFrequency: Number(breakFrequency),
-      afterHoursActivity: Number(afterHoursActivity),
-    };
-
-    saveEmployeeMetrics(newMetric);
-    setIsSubmitting(false);
-    setShowLogModal(false);
-    onMetricsUpdated();
-  };
-
   return (
     <Card className="overflow-hidden border-slate-300 bg-white p-6 shadow-sm dark:border-[#383734] dark:bg-[#2c2b28]">
       <div className="space-y-6">
@@ -155,17 +119,6 @@ export function BaselineCalibrationSuite({
             <p className="text-xs text-slate-500 dark:text-[#a6a6a6]">
               Calibrating your personal workday baseline without any pre-seeded demo data.
             </p>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              onClick={() => setShowLogModal(true)}
-              className="text-xs h-8 px-3"
-            >
-              <Plus className="mr-1.5 h-3.5 w-3.5 text-sky-500" />
-              Log Day&apos;s Signals
-            </Button>
           </div>
         </div>
 
@@ -329,179 +282,6 @@ export function BaselineCalibrationSuite({
         </div>
 
       </div>
-
-      {/* Interactive Log Daily Signal Modal */}
-      {showLogModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-[#383734] dark:bg-[#2c2b28] space-y-5">
-            
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-[#383734]">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Log Day&apos;s Work Signals
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-[#a6a6a6]">
-                  Record your telemetry to advance your 28-day calibration.
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                onClick={() => setShowLogModal(false)}
-                className="h-8 w-8 p-0"
-              >
-                ✕
-              </Button>
-            </div>
-
-            <form onSubmit={handleSaveDailyMetric} className="space-y-4">
-              
-              {/* Date Input */}
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-700 dark:text-[#cfcfce]">
-                  Log Date
-                </label>
-                <input
-                  type="date"
-                  value={logDate}
-                  onChange={(e) => setLogDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2 text-xs outline-none focus:border-slate-400 dark:border-[#383734] dark:bg-[#181817] dark:text-white"
-                  required
-                />
-              </div>
-
-              {/* Working Hours */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="font-semibold text-slate-700 dark:text-[#cfcfce] flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-sky-500" />
-                    Working Hours
-                  </span>
-                  <span className="font-bold text-slate-900 dark:text-white">{workingHours} hrs</span>
-                </div>
-                <input
-                  type="range"
-                  min="4"
-                  max="14"
-                  step="0.5"
-                  value={workingHours}
-                  onChange={(e) => setWorkingHours(parseFloat(e.target.value))}
-                  className="w-full accent-sky-500"
-                />
-              </div>
-
-              {/* Meeting Load */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="font-semibold text-slate-700 dark:text-[#cfcfce] flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5 text-teal-500" />
-                    Meeting Load
-                  </span>
-                  <span className="font-bold text-slate-900 dark:text-white">{meetingLoad} hrs</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  step="0.5"
-                  value={meetingLoad}
-                  onChange={(e) => setMeetingLoad(parseFloat(e.target.value))}
-                  className="w-full accent-teal-500"
-                />
-              </div>
-
-              {/* Rest Breaks */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="font-semibold text-slate-700 dark:text-[#cfcfce] flex items-center gap-1">
-                    <Coffee className="h-3.5 w-3.5 text-emerald-500" />
-                    Rest Breaks (≥5 mins)
-                  </span>
-                  <span className="font-bold text-slate-900 dark:text-white">{breakFrequency} pauses</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="12"
-                  step="1"
-                  value={breakFrequency}
-                  onChange={(e) => setBreakFrequency(parseInt(e.target.value, 10))}
-                  className="w-full accent-emerald-500"
-                />
-              </div>
-
-              {/* After Hours Work */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="font-semibold text-slate-700 dark:text-[#cfcfce] flex items-center gap-1">
-                    <Moon className="h-3.5 w-3.5 text-indigo-500" />
-                    After-Hours Activity (Evening)
-                  </span>
-                  <span className="font-bold text-slate-900 dark:text-white">{afterHoursActivity} mins</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="120"
-                  step="5"
-                  value={afterHoursActivity}
-                  onChange={(e) => setAfterHoursActivity(parseInt(e.target.value, 10))}
-                  className="w-full accent-indigo-500"
-                />
-              </div>
-
-              {/* Subjective Feeling */}
-              <div className="space-y-1.5 pt-1">
-                <label className="text-xs font-semibold text-slate-700 dark:text-[#cfcfce]">
-                  How did today&apos;s work rhythm feel?
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {(
-                    [
-                      { id: "energized", emoji: "⚡", label: "Energized" },
-                      { id: "balanced", emoji: "😊", label: "Balanced" },
-                      { id: "fatigued", emoji: "🥱", label: "Fatigued" },
-                      { id: "drained", emoji: "😫", label: "Drained" },
-                    ] as const
-                  ).map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setDayFeeling(item.id)}
-                      className={`flex flex-col items-center rounded-xl p-2 text-center text-xs font-medium border transition ${
-                        dayFeeling === item.id
-                          ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900 font-bold"
-                          : "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 dark:border-[#383734] dark:bg-[#181817] dark:text-[#cfcfce]"
-                      }`}
-                    >
-                      <span className="text-base">{item.emoji}</span>
-                      <span className="text-[10px] mt-0.5">{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-[#383734]">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowLogModal(false)}
-                  className="text-xs"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="text-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold"
-                >
-                  Save Day Entry
-                </Button>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
     </Card>
   );
 }
