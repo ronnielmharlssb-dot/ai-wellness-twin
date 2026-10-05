@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInUser, signInWithGoogle, loginAsRole, loginAsCalibratedDemo } from "@/lib/supabase/auth";
+import { signInUser, signInWithGoogle, loginAsRole, loginAsCalibratedDemo, isDemoModeEnabled } from "@/lib/supabase/auth";
 import { seedCalibratedDemoAccount, isDemoAccountCalibrated } from "@/lib/wellbeing/calibratedAccountSeeder";
 import { Button } from "@/components/ui/button";
 import { GoogleLogo } from "@/components/ui/brand-logos";
@@ -22,26 +22,32 @@ export default function LoginPage() {
   const [googleEmailInput, setGoogleEmailInput] = useState("");
   const [notFoundEmail, setNotFoundEmail] = useState<string | null>(null);
 
-  const handleQuickLogin = (role: "employee" | "hr") => {
+  const handleQuickLogin = async (role: "employee" | "hr") => {
     setIsLoading(true);
     setError("");
-    const user = loginAsRole(role);
+    try {
+    const user = await loginAsRole(role);
     if (user.role === "hr") {
       router.push("/hr");
     } else {
       router.push("/dashboard");
     }
+    } catch (error) { setError(error instanceof Error ? error.message : "Demo login failed."); }
+    finally { setIsLoading(false); }
   };
 
-  const handleCalibratedDemoLogin = () => {
+  const handleCalibratedDemoLogin = async () => {
     setIsLoading(true);
     setError("");
-    loginAsCalibratedDemo();
+    try {
+    await loginAsCalibratedDemo();
     // Auto-seed the 28-day baseline telemetry for this demo account
     if (!isDemoAccountCalibrated()) {
       seedCalibratedDemoAccount();
     }
     router.push("/dashboard");
+    } catch (error) { setError(error instanceof Error ? error.message : "Demo login failed."); }
+    finally { setIsLoading(false); }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -176,7 +182,7 @@ export default function LoginPage() {
           </Button>
 
           {/* Quick Demo Test Accounts */}
-          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3 dark:border-[#383734] dark:bg-[#20201e]/60 space-y-2">
+          {isDemoModeEnabled() && <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-3 dark:border-[#383734] dark:bg-[#20201e]/60 space-y-2">
             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
               🧪 Instant Demo Accounts:
             </p>
@@ -219,7 +225,7 @@ export default function LoginPage() {
                 Log in as demo@company.com →
               </button>
             </div>
-          </div>
+          </div>}
 
           <div className="my-4 flex items-center gap-4">
             <div className="h-px flex-1 bg-slate-100 dark:bg-[#383734]" />

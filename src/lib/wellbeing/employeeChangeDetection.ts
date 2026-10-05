@@ -1,151 +1,32 @@
-import type { EmployeeDailyMetrics } from "./employeeTypes";
-import { MEANINGFUL_CHANGE_THRESHOLD } from "./constants";
+import type { EmployeeDailyMetrics, MetricName } from "./employeeTypes";
+import { BASELINE_REQUIRED_DAYS, MEANINGFUL_CHANGE_THRESHOLD } from "./constants";
+import { METRIC_NAMES } from "./employeeMetrics";
+import { completedEmployeeObservations, isObservedValue, observedAverage } from "./employeeObservations";
 
-type EmployeeBaselineAverages = {
-  workingHours: number;
-  meetingLoad: number;
-  breakFrequency: number;
-  afterHoursActivity: number;
-};
-
+export type EmployeeBaselineAverages = Record<MetricName, number | null>;
 export type EmployeeChangeResult = {
-  metric:
-    | "workingHours"
-    | "meetingLoad"
-    | "breakFrequency"
-    | "afterHoursActivity";
-
-  baselineValue: number;
-  currentValue: number;
-  percentageChange: number;
-  meaningful: boolean;
+  metric: MetricName; baselineValue: number; currentValue: number;
+  /** A percentage increase from zero is undefined, rather than an invented 100%. */
+  percentageChange: number | null; meaningful: boolean;
 };
-
-function average(values: number[]): number {
-  if (values.length === 0) {
-    return 0;
-  }
-
-  return (
-    values.reduce(
-      (total, value) => total + value,
-      0
-    ) / values.length
-  );
+export function calculateEmployeeBaselineAverages(metrics: EmployeeDailyMetrics[]): EmployeeBaselineAverages {
+  return Object.fromEntries(METRIC_NAMES.map((name) => [name, observedAverage(metrics, name)])) as EmployeeBaselineAverages;
 }
-
-export function calculateEmployeeBaselineAverages(
-  metrics: EmployeeDailyMetrics[]
-): EmployeeBaselineAverages {
-  return {
-    workingHours: average(
-      metrics.map(
-        (metric) => metric.workingHours
-      )
-    ),
-
-    meetingLoad: average(
-      metrics.map(
-        (metric) => metric.meetingLoad
-      )
-    ),
-
-    breakFrequency: average(
-      metrics.map(
-        (metric) => metric.breakFrequency
-      )
-    ),
-
-    afterHoursActivity: average(
-      metrics.map(
-        (metric) =>
-          metric.afterHoursActivity
-      )
-    ),
-  };
+export function compareObservedValues(metric: MetricName, baselineValue: number, currentValue: number): EmployeeChangeResult {
+  const percentageChange = baselineValue === 0 ? currentValue === 0 ? 0 : null : (currentValue - baselineValue) / baselineValue * 100;
+  return { metric, baselineValue, currentValue, percentageChange,
+    meaningful: percentageChange === null ? currentValue > baselineValue : Math.abs(percentageChange) >= MEANINGFUL_CHANGE_THRESHOLD };
 }
-
-function calculatePercentageChange(
-  baselineValue: number,
-  currentValue: number
-): number {
-  if (baselineValue === 0) {
-    return currentValue === 0
-      ? 0
-      : 100;
-  }
-
-  return (
-    ((currentValue - baselineValue) /
-      baselineValue) *
-    100
-  );
-}
-
-export function detectEmployeeChanges(
-  baselineMetrics: EmployeeDailyMetrics[],
-  currentMetric: EmployeeDailyMetrics
-): EmployeeChangeResult[] {
-  const baseline =
-    calculateEmployeeBaselineAverages(
-      baselineMetrics
-    );
-
-  const metrics: Array<{
-    metric: EmployeeChangeResult["metric"];
-    baselineValue: number;
-    currentValue: number;
-  }> = [
-    {
-      metric: "workingHours",
-      baselineValue:
-        baseline.workingHours,
-      currentValue:
-        currentMetric.workingHours,
-    },
-
-    {
-      metric: "meetingLoad",
-      baselineValue:
-        baseline.meetingLoad,
-      currentValue:
-        currentMetric.meetingLoad,
-    },
-
-    {
-      metric: "breakFrequency",
-      baselineValue:
-        baseline.breakFrequency,
-      currentValue:
-        currentMetric.breakFrequency,
-    },
-
-    {
-      metric: "afterHoursActivity",
-      baselineValue:
-        baseline.afterHoursActivity,
-      currentValue:
-        currentMetric.afterHoursActivity,
-    },
-  ];
-
-  return metrics.map((item) => {
-    const percentageChange =
-      calculatePercentageChange(
-        item.baselineValue,
-        item.currentValue
-      );
-
-    return {
-      metric: item.metric,
-      baselineValue: item.baselineValue,
-      currentValue: item.currentValue,
-      percentageChange,
-      meaningful:
-        Math.abs(
-          percentageChange
-        ) >=
-        MEANINGFUL_CHANGE_THRESHOLD,
-    };
+/** A direct daily comparison still requires 28 distinct prior dates per metric. */
+export function detectEmployeeChanges(baselineMetrics: EmployeeDailyMetrics[], currentMetric: EmployeeDailyMetrics): EmployeeChangeResult[] {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(currentMetric.date) || !Number.isFinite(Date.parse(currentMetric.date)) ||
+      new Date(currentMetric.date).toISOString().slice(0, 10) !== currentMetric.date) return [];
+  const baseline = completedEmployeeObservations(baselineMetrics, Date.parse(currentMetric.date + "T00:00:00Z"))
+    .filter((day) => day.employeeId === currentMetric.employeeId);
+  return METRIC_NAMES.flatMap((name) => {
+    const observations = baseline.filter((day) => isObservedValue(day, name)).slice(-BASELINE_REQUIRED_DAYS);
+    const value = observedAverage(observations, name);
+    return isObservedValue(currentMetric, name) && observations.length === BASELINE_REQUIRED_DAYS && value !== null
+      ? [compareObservedValues(name, value, currentMetric[name])] : [];
   });
 }

@@ -6,12 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
-  Users,
   UserPlus,
   Mail,
   Copy,
   Check,
-  ShieldCheck,
+  ShieldCheck
 } from "lucide-react";
 import {
   getInvitations,
@@ -100,7 +99,7 @@ export default function TeamsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header & Breadcrumb */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>

@@ -1,9 +1,31 @@
-import type { ValidatedHeartbeat } from "./serverSanitizer";
+import fs from "node:fs";
+import path from "node:path";
+import { createHash, randomUUID } from "node:crypto";
+import { MAX_EVENT_AGE_MS, type ValidatedHeartbeat } from "./serverSanitizer";
 import type { EmployeeDailyMetrics } from "../wellbeing/employeeTypes";
-import { getMetricsForEmployee, saveEmployeeMetrics } from "../wellbeing/employeeMetrics";
+import { intervalSeconds as seconds, unionIntervals, type Interval } from "../signals/intervals";
 
+type DayBucket = {
+  employeeId: string;
+  organizationId: string;
+  date: string;
+  active: Record<string, Interval[]>;
+  meetings: Interval[];
+  afterHours: Interval[];
+  afterHoursObserved?: boolean;
+  breaks: number[];
+  lastHeartbeatTimestamp: string;
+  revision: number;
+};
+type Store = {
+  version: 1;
+  days: Record<string, DayBucket>;
+  receipts: Record<string, { hash: string; timestamp: number }>;
+};
 export type LiveTelemetrySummary = {
   todayMetrics: EmployeeDailyMetrics;
+  /** All daily buckets touched by this event, including midnight crossings. */
+  dailyMetrics: EmployeeDailyMetrics[];
   todayActiveMinutes: number;
   todayBreakCount: number;
   todayMeetingMinutes: number;
@@ -11,113 +33,153 @@ export type LiveTelemetrySummary = {
   lastHeartbeatTimestamp: string;
 };
 
-const serverMetricsStore: Record<string, EmployeeDailyMetrics[]> = {};
+function storePath() {
+  const configured = process.env.WELLNESS_TELEMETRY_STORE_PATH;
+  if (process.env.NODE_ENV === "production" && (!configured || !path.isAbsolute(configured))) {
+    throw new Error("Production telemetry requires an absolute path on a persistent single-host volume.");
+  }
+  return configured || path.join(process.cwd(), ".data", "telemetry-v1.json");
+}
+function readStore(): Store {
+  const filename = storePath();
+  // Runtime observations are private state, never build inputs to be bundled.
+  if (!fs.existsSync(/* turbopackIgnore: true */ filename)) return { version: 1, days: {}, receipts: {} };
+  const store = JSON.parse(fs.readFileSync(/* turbopackIgnore: true */ filename, "utf8")) as Store;
+  if (store.version !== 1 || !store.days || !store.receipts) throw new Error("Invalid telemetry store.");
+  return store;
+}
 
-const TOOL_MINUTES_STORAGE_KEY = "wellness-tool-minutes-today";
-
-export function recordToolActiveTime(source: string, activeSeconds: number) {
-  if (typeof window === "undefined") return;
-  try {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const saved = localStorage.getItem(TOOL_MINUTES_STORAGE_KEY);
-    let data: { date: string; tools: Record<string, number> } = saved
-      ? JSON.parse(saved)
-      : { date: todayStr, tools: {} };
-
-    if (data.date !== todayStr) {
-      data = { date: todayStr, tools: {} };
+function replaceSnapshot(temporaryPath: string, filename: string) {
+  // Windows scanners may briefly hold the destination. Keep atomic replacement;
+  // never delete the old snapshot or acknowledge a failed write.
+  for (let attempt = 0; ; attempt++) {
+    try { fs.renameSync(temporaryPath, filename); return; }
+    catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (attempt >= 5 || !["EPERM", "EBUSY", "EACCES"].includes(code ?? "")) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10 * 2 ** attempt);
     }
-
-    const normSource = source.toLowerCase();
-    const currentMins = data.tools[normSource] || 0;
-    const additionalMins = activeSeconds / 60;
-    data.tools[normSource] = Number((currentMins + additionalMins).toFixed(1));
-
-    localStorage.setItem(TOOL_MINUTES_STORAGE_KEY, JSON.stringify(data));
-  } catch (err) {
-    console.error("Failed to record tool active time:", err);
   }
 }
 
-export function getToolMinutesToday(): Record<string, number> {
-  if (typeof window === "undefined") return {};
-  try {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const saved = localStorage.getItem(TOOL_MINUTES_STORAGE_KEY);
-    if (!saved) return {};
-    const data = JSON.parse(saved);
-    if (data.date !== todayStr) return {};
-    return data.tools || {};
-  } catch {
-    return {};
-  }
-}
-
-/**
- * Atomically rolls up an incoming validated heartbeat into today's daily metric bucket.
- */
-export function recordLiveHeartbeat(
-  heartbeat: ValidatedHeartbeat
-): LiveTelemetrySummary {
-  const todayStr = new Date().toISOString().split("T")[0];
-  
-  let existingMetrics: EmployeeDailyMetrics[] = [];
-  if (typeof window !== "undefined") {
-    existingMetrics = getMetricsForEmployee(heartbeat.employeeId);
-    recordToolActiveTime(heartbeat.source, heartbeat.activeSeconds);
-  } else {
-    existingMetrics = serverMetricsStore[heartbeat.employeeId] || [];
-  }
-
-  const todayMetric = existingMetrics.find((m) => m.date === todayStr);
-
-  const currentWorkingHours = todayMetric ? todayMetric.workingHours : 0;
-  const currentMeetingLoad = todayMetric ? todayMetric.meetingLoad : 0;
-  const currentBreakFrequency = todayMetric ? todayMetric.breakFrequency : 0;
-  const currentAfterHours = todayMetric ? todayMetric.afterHoursActivity : 0;
-
-  // 1. Calculate delta increments
-  const additionalHours = heartbeat.activeSeconds / 3600;
-  const additionalMeetingHours = heartbeat.meetingMinutes / 60;
-  const additionalBreaks = heartbeat.isBreak ? 1 : 0;
-  const additionalAfterHoursMinutes = heartbeat.isEvening ? heartbeat.activeSeconds / 60 : 0;
-
-  // 2. Compute updated values with reasonable bounds
-  const updatedWorkingHours = Math.min(24, Number((currentWorkingHours + additionalHours).toFixed(2)));
-  const updatedMeetingLoad = Math.min(16, Number((currentMeetingLoad + additionalMeetingHours).toFixed(2)));
-  const updatedBreakFrequency = Math.min(40, currentBreakFrequency + additionalBreaks);
-  const updatedAfterHours = Math.min(480, Number((currentAfterHours + additionalAfterHoursMinutes).toFixed(1)));
-
-  const updatedMetric: EmployeeDailyMetrics = {
-    employeeId: heartbeat.employeeId,
-    date: todayStr,
-    source: "telemetry",
-    workingHours: updatedWorkingHours,
-    meetingLoad: updatedMeetingLoad,
-    breakFrequency: updatedBreakFrequency,
-    afterHoursActivity: updatedAfterHours,
-  };
-
-  // 3. Persist to server store & client storage
-  if (typeof window !== "undefined") {
-    saveEmployeeMetrics(updatedMetric);
-  } else {
-    const userMetrics = serverMetricsStore[heartbeat.employeeId] || [];
-    const idx = userMetrics.findIndex((m) => m.date === todayStr);
-    if (idx >= 0) {
-      userMetrics[idx] = updatedMetric;
-    } else {
-      userMetrics.push(updatedMetric);
-    }
-    serverMetricsStore[heartbeat.employeeId] = userMetrics;
-  }
-
+function metricFor(bucket: DayBucket): EmployeeDailyMetrics {
   return {
-    todayMetrics: updatedMetric,
-    todayActiveMinutes: Math.round(updatedWorkingHours * 60),
-    todayBreakCount: updatedBreakFrequency,
-    todayMeetingMinutes: Math.round(updatedMeetingLoad * 60),
-    todayAfterHoursMinutes: Math.round(updatedAfterHours),
-    lastHeartbeatTimestamp: heartbeat.timestamp,
+    employeeId: bucket.employeeId,
+    date: bucket.date,
+    source: "telemetry",
+    telemetryRevision: bucket.revision,
+    workingHours: seconds(Object.values(bucket.active).flat()) / 3600,
+    meetingLoad: seconds(bucket.meetings) / 3600,
+    breakFrequency: bucket.breaks.length,
+    afterHoursActivity: seconds(bucket.afterHours) / 60,
+    toolActiveMinutes: Object.fromEntries(Object.entries(bucket.active).map(([source, intervals]) => [source, seconds(intervals) / 60])),
+    observedMetrics: [
+      ...(Object.keys(bucket.active).length ? ["workingHours", "breakFrequency"] as const : bucket.breaks.length ? ["breakFrequency"] as const : []),
+      ...(bucket.meetings.length ? ["meetingLoad"] as const : []),
+      ...(bucket.afterHoursObserved !== false ? ["afterHoursActivity"] as const : []),
+    ],
   };
+}
+export function getServerMetricsStore(organizationId: string): Record<string, EmployeeDailyMetrics[]> {
+  const result: Record<string, EmployeeDailyMetrics[]> = Object.create(null);
+  for (const bucket of Object.values(readStore().days)) {
+    if (bucket.organizationId !== organizationId) continue;
+    (result[bucket.employeeId] ??= []).push(metricFor(bucket));
+  }
+  return result;
+}
+export function getLastHeartbeat(organizationId: string, employeeId: string): string | null {
+  return Object.values(readStore().days)
+    .filter((bucket) => bucket.organizationId === organizationId && bucket.employeeId === employeeId)
+    .map((bucket) => bucket.lastHeartbeatTimestamp).sort().at(-1) ?? null;
+}
+
+/** Local single-host storage: lock writers and atomically replace the durable snapshot.
+ * Use a shared transactional backend before deploying multiple server instances.
+ * Errors propagate so callers can retry; failed persistence is never acknowledged.
+ */
+export function recordLiveHeartbeat(heartbeat: ValidatedHeartbeat): LiveTelemetrySummary {
+  const filename = storePath();
+  fs.mkdirSync(path.dirname(filename), { recursive: true });
+  const lockPath = `${filename}.lock`;
+  const lock = fs.openSync(lockPath, "wx");
+  const temporaryPath = `${filename}.${randomUUID()}.tmp`;
+  try {
+    const store = readStore();
+    const receiptKey = JSON.stringify([heartbeat.organizationId, heartbeat.employeeId, heartbeat.source, heartbeat.eventId]);
+    const hash = createHash("sha256").update(JSON.stringify(heartbeat)).digest("hex");
+    const receipt = store.receipts[receiptKey];
+    if (receipt && receipt.hash !== hash) throw new Error("Event ID was reused with different metadata.");
+    const end = Date.parse(heartbeat.timestamp);
+    const date = new Date(end).toISOString().slice(0, 10);
+    const touched = new Set<string>();
+    function bucketAt(time: number) {
+      const day = new Date(time).toISOString().slice(0, 10);
+      const key = JSON.stringify([heartbeat.organizationId, heartbeat.employeeId, day]);
+      touched.add(key);
+      return store.days[key] ??= {
+        employeeId: heartbeat.employeeId, organizationId: heartbeat.organizationId, date: day,
+        active: {}, meetings: [], afterHours: [], breaks: [], lastHeartbeatTimestamp: heartbeat.timestamp, revision: 0,
+        afterHoursObserved: heartbeat.afterHoursObserved ?? true,
+      };
+    }
+    function addDuration(durationSeconds: number, target: "active" | "meetings" | "afterHours") {
+      let start = end - durationSeconds * 1000;
+      while (start < end) {
+        const dayEnd = (Math.floor(start / 86400000) + 1) * 86400000;
+        const segmentEnd = Math.min(end, dayEnd);
+        const bucket = bucketAt(start);
+        if (!receipt) {
+          const interval: Interval = [start, segmentEnd];
+          if (target === "active") {
+            bucket.active[heartbeat.source] = unionIntervals([...(bucket.active[heartbeat.source] || []), interval]);
+          } else bucket[target] = unionIntervals([...bucket[target], interval]);
+          bucket.lastHeartbeatTimestamp = [bucket.lastHeartbeatTimestamp, heartbeat.timestamp].sort().at(-1)!;
+        }
+        start = segmentEnd;
+      }
+    }
+    addDuration(heartbeat.activeSeconds, "active");
+    addDuration(heartbeat.meetingMinutes * 60, "meetings");
+    if (heartbeat.isEvening) addDuration(Math.max(heartbeat.activeSeconds, heartbeat.meetingMinutes * 60), "afterHours");
+    if (heartbeat.isBreak) {
+      const bucket = bucketAt(end);
+      if (!receipt && !bucket.breaks.includes(end)) bucket.breaks.push(end);
+    }
+    if (!receipt) {
+      for (const key of touched) {
+        const bucket = store.days[key];
+        bucket.revision = (bucket.revision ?? 0) + 1;
+        bucket.afterHoursObserved = (bucket.afterHoursObserved ?? true) || (heartbeat.afterHoursObserved ?? true);
+        bucket.lastHeartbeatTimestamp = [bucket.lastHeartbeatTimestamp, heartbeat.timestamp].sort().at(-1)!;
+      }
+      store.receipts[receiptKey] = { hash, timestamp: end };
+      for (const [key, value] of Object.entries(store.receipts)) {
+        if (value.timestamp < Date.now() - MAX_EVENT_AGE_MS) delete store.receipts[key];
+      }
+      const fd = fs.openSync(temporaryPath, "wx", 0o600);
+      try {
+        fs.writeFileSync(fd, JSON.stringify(store));
+        fs.fsyncSync(fd);
+      } finally { fs.closeSync(fd); }
+      replaceSnapshot(temporaryPath, filename);
+    }
+    const dailyMetrics = [...touched].map((key) => metricFor(store.days[key]));
+    const todayMetrics = dailyMetrics.find((metric) => metric.date === date) ?? dailyMetrics[dailyMetrics.length - 1];
+    return {
+      todayMetrics, dailyMetrics,
+      todayActiveMinutes: Math.round(todayMetrics.workingHours * 60),
+      todayBreakCount: todayMetrics.breakFrequency,
+      todayMeetingMinutes: Math.round(todayMetrics.meetingLoad * 60),
+      todayAfterHoursMinutes: Math.round(todayMetrics.afterHoursActivity),
+      lastHeartbeatTimestamp: heartbeat.timestamp,
+    };
+  } finally {
+    try {
+      if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
+    } finally {
+      try { fs.closeSync(lock); }
+      finally { fs.unlinkSync(lockPath); }
+    }
+  }
 }

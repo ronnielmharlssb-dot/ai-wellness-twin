@@ -149,15 +149,15 @@ export async function verifyBusinessKYB(
     reasons.push("Valid alphanumeric syntax with zero duplicate collision.");
 
     return {
-      isLegitimate: true,
-      confidenceScore: 90,
+      isLegitimate: false,
+      confidenceScore: 10,
       legalName: normalizedName,
       taxIdFormatted: cleanId,
-      status: "active",
+      status: "unverified",
       jurisdiction: "International Corporate Registry",
       registryAuthority: "OpenCorporates Global Enterprise Directory",
       verifiedAt: new Date().toISOString(),
-      reasons,
+      reasons: ["International Corporate Registration Identifier could not be verified automatically."],
     };
   }
 

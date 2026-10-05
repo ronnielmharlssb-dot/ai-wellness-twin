@@ -1,6 +1,11 @@
 # AI Wellness Twin — Product & Operations Manual
-**Version 1.0 MVP (Production Ready)**  
+**Version 1.0 MVP — product vision and local demonstration**
 *Confidential — For Evaluators, HR Leaders & Technical Teams*
+
+Implementation status: this manual describes the intended system. Provider connections,
+shared persistence, organization verification and server-generated HR aggregates still
+need completion and deployment verification. See [Engineering status](ENGINEERING_STATUS.md)
+for the current capabilities and remaining requirements.
 
 ---
 

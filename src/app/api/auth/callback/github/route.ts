@@ -1,103 +1,39 @@
-import { NextResponse } from "next/server";
+import { getRequestOrigin } from "@/lib/http/requestOrigin";
+import { getAuthenticatedUser } from "@/lib/supabase/serverAuth";
+import { popupResponse } from "@/lib/integrations/popupResponse";
+import { consumeOAuthFlow } from "@/lib/integrations/oauthFlow";
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const origin = getRequestOrigin(request);
+  const fail = (message: string, status = 401) => popupResponse(origin, "GitHub", message, undefined, status);
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== "employee") return fail("Sign in to your employee account before connecting GitHub.");
   const code = url.searchParams.get("code");
-  const error = url.searchParams.get("error");
-  const errorDescription = url.searchParams.get("error_description");
-
-  if (error || !code) {
-    const errorHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head><title>GitHub Authorization</title></head>
-        <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #0f172a; color: white; text-align: center;">
-          <div style="background: #1e293b; padding: 30px; border-radius: 12px; border: 1px solid #334155; max-width: 400px;">
-            <h2 style="color: #f87171; margin-top: 0;">Authorization Notice</h2>
-            <p style="font-size: 14px; color: #94a3b8;">${errorDescription || "Access window closed or completed."}</p>
-            <button onclick="window.close()" style="background: #24292e; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px;">Close Window</button>
-          </div>
-        </body>
-      </html>
-    `;
-    return new NextResponse(errorHtml, { headers: { "Content-Type": "text/html" } });
-  }
-
-  let verifiedUsername = "verified_developer";
-
-  // Exchange code for Access Token with GitHub
-  const clientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
+  if (url.searchParams.get("error") || !code) return fail("GitHub authorization was not completed.");
+  const clientId = process.env.GITHUB_CLIENT_ID || process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-
-  if (clientId && clientSecret) {
-    try {
-      const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          client_id: clientId,
-          client_secret: clientSecret,
-          code,
-        }),
-      });
-
-      const tokenData = await tokenRes.json();
-      if (tokenData.access_token) {
-        const userRes = await fetch("https://api.github.com/user", {
-          headers: {
-            Authorization: `Bearer ${tokenData.access_token}`,
-            "User-Agent": "WellnessTwin-App",
-          },
-        });
-        const userData = await userRes.json();
-        if (userData.login) {
-          verifiedUsername = userData.login;
-        }
-      }
-    } catch (e) {
-      console.error("GitHub token exchange failed:", e);
-    }
-  }
-
-  const successHtml = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>GitHub Connected</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #0f172a; color: white; margin: 0; }
-          .card { background: #1e293b; padding: 32px; border-radius: 16px; border: 1px solid #334155; text-align: center; max-width: 360px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-          .check { width: 50px; height: 50px; background: #24292e; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 24px; color: #22c55e; }
-          h2 { margin: 0 0 8px; font-size: 20px; }
-          p { color: #94a3b8; font-size: 14px; margin: 0 0 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <div class="check">✓</div>
-          <h2>GitHub Verified!</h2>
-          <p>Logged in as <strong>@${verifiedUsername}</strong></p>
-          <div style="font-size: 12px; color: #64748b;">Closing window and linking to AI Wellness Twin...</div>
-        </div>
-        <script>
-          if (window.opener) {
-            window.opener.postMessage({
-              type: 'GITHUB_OAUTH_SUCCESS',
-              username: '${verifiedUsername}'
-            }, '*');
-          }
-          setTimeout(() => {
-            window.close();
-          }, 1200);
-        </script>
-      </body>
-    </html>
-  `;
-
-  return new NextResponse(successHtml, {
-    headers: { "Content-Type": "text/html" },
-  });
+  if (!clientId || !clientSecret) return fail("GitHub authorization is not configured.", 503);
+  let flow;
+  try { flow = await consumeOAuthFlow(request, "github", user.id); }
+  catch { return fail("Authorization state is missing or invalid. Start the connection again.", 400); }
+  if (!flow.codeVerifier) return fail("Authorization proof is missing. Start the connection again.", 400);
+  try {
+    const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code,
+        redirect_uri: `${flow.origin}/api/auth/callback/github`, code_verifier: flow.codeVerifier }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!tokenResponse.ok) return fail("GitHub rejected the authorization exchange.");
+    const token = await tokenResponse.json();
+    if (typeof token.access_token !== "string") return fail("GitHub did not provide an authorization token.");
+    const profileResponse = await fetch("https://api.github.com/user", {
+      headers: { Authorization: `Bearer ${token.access_token}`, "User-Agent": "WellnessTwin-App" }, signal: AbortSignal.timeout(10000),
+    });
+    if (!profileResponse.ok) return fail("GitHub identity verification failed.");
+    const profile = await profileResponse.json();
+    if (typeof profile.login !== "string" || !profile.login) return fail("GitHub identity verification failed.");
+    return popupResponse(origin, "GitHub", `Verified account: ${profile.login}`, { type: "GITHUB_OAUTH_SUCCESS", employeeId: user.id, username: profile.login });
+  } catch { return fail("GitHub authorization is temporarily unavailable.", 502); }
 }

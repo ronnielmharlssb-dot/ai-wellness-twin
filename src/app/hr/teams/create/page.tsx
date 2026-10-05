@@ -72,7 +72,7 @@ export default function CreateGroupPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="mx-auto max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <section>
         <p className="text-sm text-slate-500">
           Team Management

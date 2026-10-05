@@ -12,7 +12,7 @@ export function ScoreGauge({
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
 
-  const validScore = score !== null && score !== undefined ? Math.max(0, Math.min(100, score)) : null;
+  const validScore = score !== null && score !== undefined && Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : null;
   const strokeDashoffset = validScore !== null ? circumference - (validScore / 100) * circumference : circumference;
 
   const colorClass =
@@ -59,7 +59,7 @@ export function ScoreGauge({
           {validScore !== null ? validScore : "--"}
         </span>
         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-          balance score
+          pattern index
         </span>
       </div>
     </div>

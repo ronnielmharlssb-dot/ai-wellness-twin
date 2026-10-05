@@ -1,324 +1,55 @@
 "use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import {
-  ArrowRight,
-  TrendingUp,
-  TrendingDown,
-  Sparkles,
-  ShieldCheck,
-  ClipboardList,
-  Activity,
-  HeartHandshake,
-  CheckCircle2,
-  ChevronRight,
-} from "lucide-react";
-
-import {
-  buildEmployeeAssessment,
-  type EmployeeAssessment,
-} from "@/lib/wellbeing/employeeAssessment";
-import { getMetricsForEmployee } from "@/lib/wellbeing/employeeMetrics";
-import { formatChange, metricLabels } from "@/lib/wellbeing/formatters";
-import { getLocalSessionUser } from "@/lib/supabase/auth";
-
+import { useState } from "react";
+import { useEmployeeAssessment } from "@/components/use-employee-assessment";
+import { AssessmentEvidence } from "@/components/ui/assessment-evidence";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { ScoreGauge } from "@/components/ui/score-gauge";
-
-type AssessmentTab = "overview" | "mbi" | "dimensions";
-
-const statusLabels: Record<string, string> = {
-  building: "Calibrating",
-  stable: "Steady & Balanced",
-  watch: "Noticing Changes",
-  attention: "Gentle Pacing Check",
-};
-
-const mbiDimensions = [
-  {
-    title: "Exhaustion Index",
-    score: "Low (1.8 / 6.0)",
-    status: "Healthy",
-    statusVariant: "positive" as const,
-    description: "Measures energy depletion and cognitive fatigue from continuous deep engineering or meeting density.",
-  },
-  {
-    title: "Cynicism / Detachment",
-    score: "Low (1.2 / 6.0)",
-    status: "Optimal",
-    statusVariant: "positive" as const,
-    description: "Evaluates psychological connection to work outcomes and daily motivation.",
-  },
-  {
-    title: "Professional Efficacy",
-    score: "High (5.4 / 6.0)",
-    status: "Strong",
-    statusVariant: "positive" as const,
-    description: "Captures feelings of competence, meaningful output, and technical achievement.",
-  },
-];
+import { formatChange, metricLabels } from "@/lib/wellbeing/formatters";
 
 export default function AssessmentPage() {
-  const [assessment, setAssessment] = useState<EmployeeAssessment | null>(null);
-  const [activeTab, setActiveTab] = useState<AssessmentTab>("overview");
-
-  useEffect(() => {
-    const sessionUser = getLocalSessionUser();
-    const employeeId = sessionUser?.id || "usr-ronnie";
-    const metrics = getMetricsForEmployee(employeeId);
-    const result = buildEmployeeAssessment(metrics);
-    setAssessment(result);
-  }, []);
-
-  const badgeVariant =
-    assessment?.status === "building"
-      ? "neutral"
-      : assessment?.status === "stable"
-      ? "positive"
-      : assessment?.status === "watch"
-      ? "neutral"
-      : "warning";
-
-  const isBuilding = assessment?.status === "building";
-
-  return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      {/* Header & Breadcrumb matching Settings */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 dark:text-slate-400">
-            <Link href="/dashboard" className="hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-              Dashboard
-            </Link>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-slate-700 dark:text-slate-300">Assessment</span>
-          </div>
-
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-slate-100">
-            Wellness Assessment
-          </h1>
-
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Supportive, non-diagnostic reflection comparing recent telemetry and Maslach Burnout Inventory (MBI-GS) responses against your baseline.
-          </p>
-        </div>
-
-        <Link href="/dashboard">
-          <Button variant="outline" className="text-xs">
-            ← Back to Dashboard
-          </Button>
-        </Link>
-      </div>
-
-      {/* Tabbed Layout Container matching Settings */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Settings-style Sidebar Tabs Card */}
-        <div className="lg:col-span-3">
-          <div className="flex flex-row overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0 gap-1.5 rounded-2xl border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900/90 shadow-sm">
-            {[
-              { id: "overview", label: "Assessment Overview", icon: Sparkles },
-              { id: "mbi", label: "MBI-GS Scientific Survey", icon: ClipboardList },
-              { id: "dimensions", label: "Telemetry Dimensions", icon: Activity },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id as AssessmentTab)}
-                  className={`flex shrink-0 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
-                    active
-                      ? "bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className={active ? "text-white dark:text-slate-900" : "text-slate-400 dark:text-slate-500"}>
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="whitespace-nowrap">{tab.label}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Privacy Guarantee Side Note */}
-          <div className="mt-4 hidden lg:block rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900/60 shadow-sm">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
-              <p className="font-semibold text-slate-900 dark:text-slate-200">100% Confidential</p>
-            </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-              Your individual assessment scores and survey entries are stored locally on your device and are <strong>never visible</strong> to HR or managers.
-            </p>
-          </div>
-        </div>
-
-        {/* Right Content Panel */}
-        <div className="lg:col-span-9 space-y-6">
-          {/* Tab 1: Overview */}
-          {activeTab === "overview" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Main Score Card */}
-              <Card className="p-6">
-                <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2.5">
-                      <Badge variant={badgeVariant}>
-                        {assessment ? statusLabels[assessment.status] : "Calibrating"}
-                      </Badge>
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        Composite Vitality Index
-                      </span>
-                    </div>
-
-                    <p className="max-w-md text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                      Your Wellness Twin is continuously measuring rest buffers, meeting density, and focus consistency compared against your personal baseline.
-                    </p>
-
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                      {assessment?.status === "building"
-                        ? `Recording day ${assessment.daysCollected} of ${assessment.requiredDays} to calibrate baseline.`
-                        : "Telemetry signals are compared against your personal 28-day historical baseline."}
-                    </p>
-                  </div>
-
-                  <div className="flex justify-center shrink-0">
-                    <ScoreGauge
-                      score={assessment?.score ?? null}
-                      size={130}
-                    />
-                  </div>
-                </div>
-              </Card>
-
-              {/* Dimension Quick Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {mbiDimensions.map((dim) => (
-                  <Card key={dim.title} className="p-4">
-                    <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
-                      {dim.title}
-                    </span>
-                    <p className="mt-1 text-base font-bold text-slate-900 dark:text-slate-100">
-                      {dim.score}
-                    </p>
-                    <div className="mt-2">
-                      <Badge variant={dim.statusVariant}>
-                        {dim.status}
-                      </Badge>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Tab 2: MBI-GS Survey */}
-          {activeTab === "mbi" && (
-            <Card className="p-6 space-y-4 animate-in fade-in duration-200">
-              <div className="border-b border-slate-100 pb-3 dark:border-slate-800">
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  Maslach Burnout Inventory (MBI-GS)
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Scientifically validated 3-factor burnout assessment framework.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {mbiDimensions.map((dim) => (
-                  <div key={dim.title} className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800 dark:bg-slate-900/60 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        {dim.title}
-                      </h3>
-                      <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        {dim.score}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                      {dim.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* Tab 3: Telemetry Dimensions */}
-          {activeTab === "dimensions" && (
-            <Card className="p-6 space-y-4 animate-in fade-in duration-200">
-              <div className="border-b border-slate-100 pb-3 dark:border-slate-800">
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  Telemetry Breakdown vs Baseline
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Ground truth comparisons across recorded work activity.
-                </p>
-              </div>
-
-              {isBuilding ? (
-                <p className="py-8 text-center text-xs text-slate-400">
-                  Telemetry calibration in progress. Complete 28 days to view full variance.
-                </p>
-              ) : (
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {assessment?.changes.map((change) => {
-                    const isIncrease = change.percentageChange > 0;
-                    return (
-                      <div
-                        key={change.metric}
-                        className="flex items-center justify-between py-3 text-xs"
-                      >
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-slate-100">
-                            {metricLabels[change.metric] ?? change.metric}
-                          </p>
-                          <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                            Baseline: {change.baselineValue.toFixed(1)} → Recent: {change.currentValue.toFixed(1)}
-                          </p>
-                        </div>
-
-                        <span
-                          className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-bold ${
-                            isIncrease
-                              ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
-                              : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
-                          }`}
-                        >
-                          {isIncrease ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                          {formatChange(change.percentageChange)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-          )}
-
-          {/* Guided Next Step Journey */}
-          <div className="flex items-center justify-between pt-2">
-            <Link href="/dashboard/patterns">
-              <Button variant="ghost" className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white">
-                ← My Patterns
-              </Button>
-            </Link>
-
-            <Link href="/dashboard/recommendations">
-              <Button className="flex items-center gap-2 text-xs">
-                <span>View Recommendations</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+  const assessment = useEmployeeAssessment();
+  const [activeTab, setActiveTab] = useState<"overview" | "survey" | "dimensions">("overview");
+  const labels = { building: "Collecting evidence", partial: "Partial observations", stable: "Recorded patterns steady",
+    watch: "Recorded patterns changed", attention: "Review recorded changes" };
+  return <div className="mx-auto max-w-6xl space-y-6">
+    <div className="flex items-center justify-between gap-3">
+      <div><h1 className="text-2xl font-bold">Personal Work Pattern Assessment</h1>
+        <p className="mt-2 text-sm text-slate-500">Reflect on your own recorded activity and its coverage.</p></div>
+      <Link href="/dashboard"><Button variant="outline">Back to Dashboard</Button></Link>
     </div>
-  );
+    <nav aria-label="Assessment views" className="flex flex-wrap gap-2">
+      {(["overview", "dimensions", "survey"] as const).map(tab => <Button key={tab} variant={activeTab === tab ? "primary" : "outline"}
+        onClick={() => setActiveTab(tab)}>{tab === "survey" ? "Survey availability" : tab === "dimensions" ? "Metric comparisons" : "Overview"}</Button>)}
+    </nav>
+    {activeTab === "survey" ? <Card className="space-y-3 p-6">
+      <Badge variant="neutral">Unavailable</Badge><h2 className="text-lg font-bold">Survey assessment is not implemented</h2>
+      <p className="text-sm text-slate-500">No survey responses have been collected or scored here. Exhaustion, detachment,
+        and efficacy scores are unavailable. Recorded activity cannot supply those responses.</p>
+      <p className="text-sm text-slate-500">The weekly check-in is a private reflection, and does not produce a clinical assessment.</p>
+    </Card> : <>
+      <AssessmentEvidence assessment={assessment} />
+      {activeTab === "overview" ? <Card className="flex flex-wrap items-center justify-between gap-6 p-6">
+        <div className="max-w-xl space-y-3"><Badge variant="neutral">{assessment ? labels[assessment.status] : "Loading observations"}</Badge>
+          <h2 className="text-lg font-bold">Recorded work pattern index</h2>
+          <p className="text-sm text-slate-500">This descriptive index summarizes increases in recorded active time, scheduled meeting load,
+            and after-hours activity, and decreases in recorded breaks relative to your baseline.
+            It does not measure your health, energy, productivity, or burnout.</p>
+          <p className="text-sm text-slate-500">Unknown metrics stay unknown. A high index does not establish that you feel well.</p>
+        </div><ScoreGauge score={assessment?.score ?? null} size={140} />
+      </Card> : <Card className="space-y-4 p-6">
+        <h2 className="text-lg font-bold">Available daily average comparisons</h2>
+        {!assessment?.comparisons.length && <p className="text-sm text-slate-500">No metric yet has 28 earlier observed dates and an observation in the recent window.</p>}
+        {assessment?.comparisons.map(change => <div key={change.metric} className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 py-3 dark:border-slate-800">
+          <div><p className="font-semibold">{metricLabels[change.metric]}</p><p className="text-sm text-slate-500">
+            Earlier average: {change.baselineValue.toFixed(1)} · Recent observed average: {change.currentValue.toFixed(1)}</p></div>
+          <Badge variant="neutral">{formatChange(change.percentageChange)}</Badge>
+        </div>)}
+      </Card>}
+    </>}
+    <div className="flex justify-between"><Link href="/dashboard/patterns"><Button variant="outline">My Patterns</Button></Link>
+      <Link href="/dashboard/recommendations"><Button>Reflection ideas</Button></Link></div>
+  </div>;
 }

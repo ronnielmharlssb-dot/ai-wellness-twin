@@ -1,16 +1,13 @@
 import type { EmployeeDailyMetrics } from "./employeeTypes";
 import { BASELINE_REQUIRED_DAYS } from "./constants";
+import { buildEmployeeAssessment } from "./employeeAssessment";
 
 export const EMPLOYEE_BASELINE_DAYS = BASELINE_REQUIRED_DAYS;
 
 export function getEmployeeBaselineDays(
   metrics: EmployeeDailyMetrics[]
 ): number {
-  const uniqueDates = new Set(
-    metrics.map((metric) => metric.date)
-  );
-
-  return uniqueDates.size;
+  return buildEmployeeAssessment(metrics).daysCollected;
 }
 
 export function isEmployeeBaselineEstablished(

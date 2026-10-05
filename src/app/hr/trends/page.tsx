@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 
 const trends = [
   {

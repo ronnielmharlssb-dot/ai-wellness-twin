@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  ArrowRight,
   TrendingUp,
   TrendingDown,
   Activity,
@@ -16,34 +15,23 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-import {
-  buildEmployeeAssessment,
-  type EmployeeAssessment,
-} from "@/lib/wellbeing/employeeAssessment";
-import { getMetricsForEmployee } from "@/lib/wellbeing/employeeMetrics";
 import { formatChange, metricLabels } from "@/lib/wellbeing/formatters";
-import { getLocalSessionUser } from "@/lib/supabase/auth";
 
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BaselineProgressTracker } from "@/components/ui/baseline-progress";
+import { AssessmentEvidence } from "@/components/ui/assessment-evidence";
+import { useEmployeeAssessment } from "@/components/use-employee-assessment";
 
 type PatternTab = "all" | "focus" | "meetings" | "boundaries" | "breaks";
 
 export default function PatternsPage() {
-  const [assessment, setAssessment] = useState<EmployeeAssessment | null>(null);
+  const assessment = useEmployeeAssessment();
   const [activeTab, setActiveTab] = useState<PatternTab>("all");
 
-  useEffect(() => {
-    const user = getLocalSessionUser();
-    const employeeId = user?.id || "usr-ronnie";
-    const metrics = getMetricsForEmployee(employeeId);
-    const result = buildEmployeeAssessment(metrics);
-    setAssessment(result);
-  }, []);
 
-  const isBuilding = assessment?.status === "building";
+  const isBuilding = !assessment || assessment.status === "building";
 
   const filterChanges = (tab: PatternTab) => {
     if (!assessment) return [];
@@ -70,7 +58,8 @@ export default function PatternsPage() {
   const displayedChanges = filterChanges(activeTab);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <AssessmentEvidence assessment={assessment} />
       {/* Header & Breadcrumb matching Settings */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -87,7 +76,7 @@ export default function PatternsPage() {
           </h1>
 
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            28-day ground-truth calibration compares your recent rhythms strictly against your personal baseline without peer ranking.
+            Compare your recent recorded activity against your own earlier observations, without peer ranking.
           </p>
         </div>
 
@@ -115,17 +104,17 @@ export default function PatternsPage() {
                 <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   Personal Baseline Calibration
                 </h2>
-                <Badge variant={isBuilding ? "neutral" : "positive"}>
+                <Badge variant={assessment?.score === null || isBuilding ? "neutral" : "positive"}>
                   {isBuilding
                     ? `Day ${assessment?.daysCollected ?? 0} / 28`
-                    : "Baseline Calibrated"}
+                    : assessment?.status === "partial" ? "Partial metric coverage" : "Comparison available"}
                 </Badge>
               </div>
 
               <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                 {isBuilding
-                  ? `Recording day ${assessment?.daysCollected ?? 0} of 28 to calibrate your personalized ground truth.`
-                  : "Ground truth active across 28 recorded workday sessions. Shifts are highlighted when they deviate ≥ 20%."}
+                  ? "Each metric needs 28 earlier observed dates and recent observations before it can be compared."
+                  : "Available metrics compare recent observed daily averages with 28 earlier observations. Shifts of at least 20% and newly nonzero activity are highlighted."}
               </p>
             </div>
           </div>
@@ -188,7 +177,7 @@ export default function PatternsPage() {
           <div className="mt-4 hidden lg:block rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-800 dark:bg-slate-900/60 shadow-sm">
             <p className="font-semibold text-slate-900 dark:text-slate-200">Meaningful Shifts</p>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-              A shift is marked as meaningful when current 7-day rolling patterns differ by more than <strong>20%</strong> from your 28-day baseline.
+              A recorded shift is flagged at <strong>20%</strong> or when activity appears after a zero baseline. These flags are descriptive, not a health assessment.
             </p>
           </div>
         </div>
@@ -202,7 +191,7 @@ export default function PatternsPage() {
                   Observed Pattern Metrics
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Comparing current rolling 7-day average against your 28-day ground truth.
+                  Comparing recorded daily averages from the recent seven closed dates with earlier observations.
                 </p>
               </div>
 
@@ -218,17 +207,17 @@ export default function PatternsPage() {
                   Baseline Gathering Telemetry ({assessment?.daysCollected ?? 0} / 28 days)
                 </p>
                 <p className="mx-auto mt-1 max-w-sm text-xs text-slate-500 dark:text-slate-400">
-                  Metrics are accumulating in the background. Full percentage variance will be computed once baseline calibration reaches 28 days.
+                  Missing measurements stay unknown. See the evidence table for each metric’s earlier and recent observations.
                 </p>
               </div>
             ) : displayedChanges.length === 0 ? (
               <div className="py-10 text-center text-xs text-slate-400">
-                No metrics recorded under this category.
+                No flagged shifts in the available comparisons for this category.
               </div>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {displayedChanges.map((change) => {
-                  const isIncrease = change.percentageChange > 0;
+                  const isIncrease = change.currentValue > change.baselineValue;
                   return (
                     <div
                       key={change.metric}
@@ -239,7 +228,7 @@ export default function PatternsPage() {
                           {metricLabels[change.metric] ?? change.metric}
                         </p>
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          {change.meaningful ? "≥ 20% meaningful deviation" : "Stable within baseline range"}
+                          {change.percentageChange === null ? "New recorded activity after a zero baseline" : change.meaningful ? "At least 20% recorded shift" : "Recorded average close to baseline"}
                         </p>
                       </div>
 

@@ -87,7 +87,7 @@ export function saveOrganizations(orgs: Organization[]) {
 }
 
 /**
- * Validates that an email belongs to a domain. Allows all domains for flexible registration.
+ * Validates that an email belongs to a corporate domain. Rejects free and disposable domains.
  */
 export function isCorporateEmail(email: string): { valid: boolean; domain: string; reason?: string } {
   if (!email || !email.includes("@")) {
@@ -100,6 +100,11 @@ export function isCorporateEmail(email: string): { valid: boolean; domain: strin
   }
 
   const domain = parts[1];
+
+  if (FREE_EMAIL_DOMAINS.has(domain)) {
+    return { valid: false, domain, reason: "Please use a corporate work email. Consumer domains are not allowed." };
+  }
+
   return { valid: true, domain };
 }
 

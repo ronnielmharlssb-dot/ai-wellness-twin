@@ -1,3 +1,4 @@
+import { buildEmployeeAssessment } from "./employeeAssessment";
 import type { EmployeeDailyMetrics } from "./employeeTypes";
 import { getMetricsForEmployee, saveEmployeeMetricsBatch, clearEmployeeMetrics } from "./employeeMetrics";
 import { getStoredIntegrations, saveStoredIntegrations } from "../integrations/syncEngine";
@@ -5,18 +6,18 @@ import { getStoredIntegrations, saveStoredIntegrations } from "../integrations/s
 export const CALIBRATED_DEMO_ID = "usr-demo-calibrated";
 
 /**
- * Generates 28 days of realistic baseline telemetry metrics for the demo account
+ * Generates synthetic closed UTC dates for the isolated demo account
  */
-export function generate28DayMetrics(employeeId: string = CALIBRATED_DEMO_ID): EmployeeDailyMetrics[] {
+export function generate28DayMetrics(employeeId: string = CALIBRATED_DEMO_ID, days = 28): EmployeeDailyMetrics[] {
   const metrics: EmployeeDailyMetrics[] = [];
   const today = new Date();
 
   // 28 days of realistic workday patterns across the 4 calibration weeks
-  for (let i = 27; i >= 0; i--) {
+  for (let i = days; i >= 1; i--) {
     const d = new Date(today);
-    d.setDate(d.getDate() - i);
+    d.setUTCDate(d.getUTCDate() - i);
     const dateStr = d.toISOString().split("T")[0];
-    const dayOfWeek = d.getDay(); // 0 is Sunday, 6 is Saturday
+    const dayOfWeek = d.getUTCDay(); // 0 is Sunday, 6 is Saturday
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
     if (isWeekend) {
@@ -24,7 +25,7 @@ export function generate28DayMetrics(employeeId: string = CALIBRATED_DEMO_ID): E
       metrics.push({
         employeeId,
         date: dateStr,
-        source: "telemetry",
+        source: "demo",
         workingHours: Number((Math.random() * 0.8).toFixed(1)),
         meetingLoad: 0,
         breakFrequency: Math.floor(Math.random() * 2),
@@ -44,7 +45,7 @@ export function generate28DayMetrics(employeeId: string = CALIBRATED_DEMO_ID): E
       metrics.push({
         employeeId,
         date: dateStr,
-        source: i % 3 === 0 ? "github" : "telemetry",
+        source: "demo",
         workingHours: Number(baseHours.toFixed(1)),
         meetingLoad: Number(baseMeetings.toFixed(1)),
         breakFrequency: baseBreaks,
@@ -57,14 +58,18 @@ export function generate28DayMetrics(employeeId: string = CALIBRATED_DEMO_ID): E
 }
 
 /**
- * Seeds all 28-day baseline telemetry and input data for the calibrated demo account
+ * Seeds 28 baseline dates plus seven recent synthetic dates for the calibrated demo account
  */
 export function seedCalibratedDemoAccount(): void {
   if (typeof window === "undefined") return;
 
-  // 1. Generate and save 28 days of baseline metrics
-  const full28Days = generate28DayMetrics(CALIBRATED_DEMO_ID);
-  saveEmployeeMetricsBatch(full28Days);
+  // 1. Generate and save 35 closed dates for separate baseline/recent windows
+  const full28Days = generate28DayMetrics(CALIBRATED_DEMO_ID, 35);
+  clearEmployeeMetrics(CALIBRATED_DEMO_ID);
+  saveEmployeeMetricsBatch([...full28Days, {
+    employeeId: CALIBRATED_DEMO_ID, date: new Date().toISOString().slice(0, 10), source: "demo",
+    workingHours: 8.5, meetingLoad: 3, breakFrequency: 3, afterHoursActivity: 45,
+  }]);
 
   // 2. Pre-link realistic sample integrations for the demo account (isolated to CALIBRATED_DEMO_ID)
   try {
@@ -119,10 +124,10 @@ export function resetCalibratedDemoAccount(): void {
 }
 
 /**
- * Check if the demo account is currently fully calibrated (has >= 28 days)
+ * Check whether synthetic observations support a complete comparison
  */
 export function isDemoAccountCalibrated(): boolean {
   if (typeof window === "undefined") return false;
   const metrics = getMetricsForEmployee(CALIBRATED_DEMO_ID);
-  return metrics.length >= 28;
+  return buildEmployeeAssessment(metrics).score !== null && metrics.every((metric) => metric.source === "demo");
 }

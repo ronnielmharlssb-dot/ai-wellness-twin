@@ -1,126 +1,36 @@
-import { NextResponse } from "next/server";
+import { getRequestOrigin } from "@/lib/http/requestOrigin";
+import { getAuthenticatedUser } from "@/lib/supabase/serverAuth";
+import { popupResponse } from "@/lib/integrations/popupResponse";
+import { consumeOAuthFlow } from "@/lib/integrations/oauthFlow";
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const origin = getRequestOrigin(request);
+  const fail = (message: string, status = 401) => popupResponse(origin, "Discord", message, undefined, status);
+  const user = await getAuthenticatedUser();
+  if (!user || user.role !== "employee") return fail("Sign in to your employee account before connecting Discord.");
   const code = url.searchParams.get("code");
-  const error = url.searchParams.get("error");
-  const errorDescription = url.searchParams.get("error_description");
-
-  if (error || !code) {
-    const errorHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head><title>Discord Authorization Failed</title></head>
-        <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #0f172a; color: white; text-align: center;">
-          <div style="background: #1e293b; padding: 30px; border-radius: 12px; border: 1px solid #334155; max-width: 400px;">
-            <h2 style="color: #f87171; margin-top: 0;">Authorization Failed</h2>
-            <p style="font-size: 14px; color: #94a3b8;">${errorDescription || "Access was not granted by Discord."}</p>
-            <button onclick="window.close()" style="background: #38bdf8; color: black; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px;">Close Window</button>
-          </div>
-        </body>
-      </html>
-    `;
-    return new NextResponse(errorHtml, { headers: { "Content-Type": "text/html" } });
-  }
-
-  const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+  if (url.searchParams.get("error") || !code) return fail("Discord authorization was not completed.");
+  const clientId = process.env.DISCORD_CLIENT_ID || process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
   const clientSecret = process.env.DISCORD_CLIENT_SECRET;
-  const redirectUri = `${url.origin}/api/auth/callback/discord`;
-
-  let verifiedUsername = "verified_discord_user";
-  let authError: string | null = null;
-
-  if (clientId && clientSecret) {
-    try {
-      const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          client_id: clientId,
-          client_secret: clientSecret,
-          grant_type: "authorization_code",
-          code,
-          redirect_uri: redirectUri,
-        }),
-      });
-
-      if (tokenRes.ok) {
-        const tokenData = await tokenRes.json();
-        const userRes = await fetch("https://discord.com/api/users/@me", {
-          headers: {
-            Authorization: `Bearer ${tokenData.access_token}`,
-          },
-        });
-
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          verifiedUsername = userData.username || userData.global_name || verifiedUsername;
-        } else {
-          authError = "Failed to fetch Discord user profile.";
-        }
-      } else {
-        const errJson = await tokenRes.json().catch(() => ({}));
-        authError = errJson.error_description || errJson.error || "Discord token exchange failed.";
-      }
-    } catch (tokenErr) {
-      authError = tokenErr instanceof Error ? tokenErr.message : "Token exchange network error.";
-    }
-  }
-
-  if (authError) {
-    const errorHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head><title>Discord Authorization Error</title></head>
-        <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #0f172a; color: white; text-align: center;">
-          <div style="background: #1e293b; padding: 30px; border-radius: 12px; border: 1px solid #334155; max-width: 420px;">
-            <h2 style="color: #f87171; margin-top: 0;">Discord Link Notice</h2>
-            <p style="font-size: 14px; color: #94a3b8;">${authError}</p>
-            <p style="font-size: 12px; color: #64748b;">Make sure http://localhost:3000/api/auth/callback/discord is added in Discord Developer Portal under OAuth2 Redirects.</p>
-            <button onclick="window.close()" style="background: #5865F2; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px;">Close Window</button>
-          </div>
-        </body>
-      </html>
-    `;
-    return new NextResponse(errorHtml, { headers: { "Content-Type": "text/html" } });
-  }
-
-  const successHtml = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Discord Connected</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #0f172a; color: white; margin: 0; }
-          .card { background: #1e293b; padding: 32px; border-radius: 16px; border: 1px solid #334155; text-align: center; max-width: 360px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-          .check { width: 50px; height: 50px; background: #5865F2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 24px; }
-          h2 { margin: 0 0 8px; font-size: 20px; }
-          p { color: #94a3b8; font-size: 14px; margin: 0 0 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <div class="check">✓</div>
-          <h2>Discord Verified!</h2>
-          <p>Logged in as <strong>@${verifiedUsername}</strong></p>
-          <div style="font-size: 12px; color: #64748b;">Closing window and linking to AI Wellness Twin...</div>
-        </div>
-        <script>
-          if (window.opener) {
-            window.opener.postMessage({
-              type: 'DISCORD_OAUTH_SUCCESS',
-              username: '${verifiedUsername}'
-            }, '*');
-          }
-          setTimeout(() => {
-            window.close();
-          }, 1200);
-        </script>
-      </body>
-    </html>
-  `;
-
-  return new NextResponse(successHtml, { headers: { "Content-Type": "text/html" } });
+  if (!clientId || !clientSecret) return fail("Discord authorization is not configured.", 503);
+  try { await consumeOAuthFlow(request, "discord", user.id); }
+  catch { return fail("Authorization state is missing or invalid. Start the connection again.", 400); }
+  try {
+    const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code, grant_type: "authorization_code", redirect_uri: `${origin}/api/auth/callback/discord` }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!tokenResponse.ok) return fail("Discord rejected the authorization exchange.");
+    const token = await tokenResponse.json();
+    if (typeof token.access_token !== "string") return fail("Discord did not provide an authorization token.");
+    const profileResponse = await fetch("https://discord.com/api/users/@me", {
+      headers: { Authorization: `Bearer ${token.access_token}` }, signal: AbortSignal.timeout(10000),
+    });
+    if (!profileResponse.ok) return fail("Discord identity verification failed.");
+    const profile = await profileResponse.json();
+    if (typeof profile.username !== "string" || !profile.username) return fail("Discord identity verification failed.");
+    return popupResponse(origin, "Discord", `Verified account: ${profile.username}`, { type: "DISCORD_OAUTH_SUCCESS", employeeId: user.id, username: profile.username });
+  } catch { return fail("Discord authorization is temporarily unavailable.", 502); }
 }

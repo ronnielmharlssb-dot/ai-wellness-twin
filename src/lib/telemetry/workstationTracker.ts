@@ -1,7 +1,11 @@
 "use client";
 
 import { getLocalSessionUser } from "../supabase/auth";
-import { saveEmployeeMetrics } from "../wellbeing/employeeMetrics";
+import { getMetricsForEmployee } from "../wellbeing/employeeMetrics";
+import { getUserSettings, userSettingsKey, type UserSettingsState } from "../settings/userSettings";
+import { workSchedulePosition } from "../settings/workSchedule";
+import { HeartbeatQueueService } from "./heartbeatQueue";
+import type { RejectedObservation } from "./pendingObservations";
 
 export type TrackerState = {
   isRunning: boolean;
@@ -10,229 +14,214 @@ export type TrackerState = {
   todayBreaks: number;
   lastHeartbeatSentAt: string | null;
   activeFocusStreakSeconds: number;
+  pendingEvents?: number;
+  rejectedEvents?: number;
+  memoryOnlyEvents?: number;
+  error?: string | null;
 };
 
-class WorkstationTrackerService {
+export class WorkstationTrackerService {
   private isRunning = false;
   private isPaused = false;
-  private timer: NodeJS.Timeout | null = null;
-  private accumulatedActiveSeconds = 0;
-  private lastActivityTimestamp = Date.now();
-  private lastAwayTimestamp: number | null = null;
-  private hasPendingBreak = false;
-  private todayBreaks = 0;
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private employeeId = "";
+  private lastSample = 0;
+  private lastPresence = 0;
+  private awaySince: number | null = null;
+  private focused = false;
+  private focusStreak = 0;
+  private uploads = new HeartbeatQueueService();
+  private settings: UserSettingsState | null = null;
+  private stateListeners = new Set<(state: TrackerState) => void>();
 
-  private stateListeners: Set<(state: TrackerState) => void> = new Set();
-
-  constructor() {
-    this.loadStateFromStorage();
-  }
-
-  private loadStateFromStorage() {
-    if (typeof window === "undefined") return;
-    try {
-      const todayStr = new Date().toISOString().split("T")[0];
-      const saved = localStorage.getItem("wellness-workstation-tracker-state");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.date === todayStr && typeof parsed.seconds === "number") {
-          this.accumulatedActiveSeconds = parsed.seconds;
-          this.todayBreaks = parsed.breaks || 0;
-          if (parsed.lastActivityTimestamp) {
-            this.lastActivityTimestamp = parsed.lastActivityTimestamp;
-          }
-          return;
-        }
-      }
-    } catch {
-      // ignore parsing error
-    }
-    this.accumulatedActiveSeconds = 0;
-    this.todayBreaks = 0;
-  }
-
-  private saveStateToStorage() {
-    if (typeof window === "undefined") return;
-    try {
-      const todayStr = new Date().toISOString().split("T")[0];
-      localStorage.setItem(
-        "wellness-workstation-tracker-state",
-        JSON.stringify({
-          date: todayStr,
-          seconds: this.accumulatedActiveSeconds,
-          breaks: this.todayBreaks,
-          lastActivityTimestamp: this.lastActivityTimestamp,
-        })
-      );
-    } catch {
-      // ignore storage error
-    }
-  }
-
+  constructor() { this.uploads.subscribe(() => this.notifyListeners()); }
   public subscribe(listener: (state: TrackerState) => void) {
     this.stateListeners.add(listener);
     listener(this.getState());
-    return () => {
-      this.stateListeners.delete(listener);
-    };
+    return () => { this.stateListeners.delete(listener); };
   }
-
   private notifyListeners() {
     const state = this.getState();
-    this.stateListeners.forEach((l) => l(state));
+    this.stateListeners.forEach((listener) => listener(state));
   }
-
   public getState(): TrackerState {
+    const date = new Date().toISOString().slice(0, 10);
+    const user = getLocalSessionUser();
+    const metric = user?.id === this.employeeId && user.role === "employee"
+      ? getMetricsForEmployee(this.employeeId).find((item) => item.date === date) : undefined;
     return {
-      isRunning: this.isRunning,
-      isPaused: this.isPaused,
-      todayActiveSeconds: this.accumulatedActiveSeconds,
-      todayBreaks: this.todayBreaks + (this.hasPendingBreak ? 1 : 0),
-      lastHeartbeatSentAt: new Date(this.lastActivityTimestamp).toISOString(),
-      activeFocusStreakSeconds: this.accumulatedActiveSeconds,
+      isRunning: this.isRunning, isPaused: this.isPaused,
+      // Show acknowledged observations; pending packets have a separate status.
+      todayActiveSeconds: (metric?.toolActiveMinutes?.workstation ?? 0) * 60,
+      todayBreaks: metric?.contributions?.telemetry?.breakFrequency ?? 0,
+      lastHeartbeatSentAt: this.uploads.getState().lastHeartbeat,
+      activeFocusStreakSeconds: this.focusStreak,
+      pendingEvents: this.uploads.getState().pendingEvents, rejectedEvents: this.uploads.getState().rejectedEvents,
+      memoryOnlyEvents: this.uploads.getState().memoryOnlyEvents, error: this.uploads.getState().error,
     };
   }
-
   public start() {
     if (this.isRunning || typeof window === "undefined") return;
-
-    this.loadStateFromStorage();
+    const user = getLocalSessionUser();
+    if (!user || user.role !== "employee" || user.id === "usr-demo-calibrated") return;
+    this.employeeId = user.id;
     this.isRunning = true;
-    this.isPaused = false;
-    this.lastActivityTimestamp = Date.now();
-
-    // 1. Listen for user activity events (Strictly binary interaction timestamps - NO keylogging)
+    this.settings = structuredClone(getUserSettings(user.id));
+    this.isPaused = !this.settings.telemetry.heartbeatTrackerEnabled;
+    this.uploads.start(user.id, this.isPaused);
+    this.lastSample = this.lastPresence = Date.now();
+    this.focused = !document.hidden && document.hasFocus();
+    this.awaySince = null;
+    this.focusStreak = 0;
     window.addEventListener("focus", this.handleFocus);
     window.addEventListener("blur", this.handleBlur);
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
-    window.addEventListener("pointerdown", this.handleUserPresence);
-    window.addEventListener("keydown", this.handleUserPresence);
-
-    // 2. Start regular dispatch loop
-    this.timer = setInterval(() => {
-      this.tickAndDispatch();
-    }, 45000); // 45-second heartbeat cycle
-
-    console.log("🟢 [WORKSTATION TRACKER]: Live telemetry heartbeat bridge activated.");
+    window.addEventListener("pointerdown", this.handlePresence);
+    window.addEventListener("pointermove", this.handlePresence);
+    window.addEventListener("keydown", this.handlePresence);
+    window.addEventListener("wellness-settings-updated", this.handleSettings);
+    window.addEventListener("wellness-auth-update", this.handleAuthUpdate);
+    window.addEventListener("storage", this.handleStorage);
+    this.timer = setInterval(() => this.tickAndDispatch(), 45000);
+    if (!this.isPaused) void this.uploads.flush();
     this.notifyListeners();
   }
-
   public pause() {
+    this.captureUntil(Date.now());
     this.isPaused = true;
+    this.uploads.setPaused(true);
+    this.focusStreak = 0;
     this.notifyListeners();
   }
-
   public resume() {
+    if (!this.isRunning) this.start();
+    if (!getUserSettings().telemetry.heartbeatTrackerEnabled) return;
     this.isPaused = false;
-    this.lastActivityTimestamp = Date.now();
+    this.uploads.setPaused(false);
+    this.lastSample = this.lastPresence = Date.now();
+    this.focused = !document.hidden && document.hasFocus();
+    this.awaySince = null;
+    void this.uploads.flush();
     this.notifyListeners();
   }
-
   public stop() {
-    if (!this.isRunning || typeof window === "undefined") return;
-
+    if (!this.isRunning) return;
+    this.captureUntil(Date.now());
     this.isRunning = false;
+    this.focusStreak = 0;
+    this.uploads.stop();
     if (this.timer) clearInterval(this.timer);
-
     window.removeEventListener("focus", this.handleFocus);
     window.removeEventListener("blur", this.handleBlur);
     document.removeEventListener("visibilitychange", this.handleVisibilityChange);
-    window.removeEventListener("pointerdown", this.handleUserPresence);
-    window.removeEventListener("keydown", this.handleUserPresence);
-
+    window.removeEventListener("pointerdown", this.handlePresence);
+    window.removeEventListener("pointermove", this.handlePresence);
+    window.removeEventListener("keydown", this.handlePresence);
+    window.removeEventListener("wellness-settings-updated", this.handleSettings);
+    window.removeEventListener("wellness-auth-update", this.handleAuthUpdate);
+    window.removeEventListener("storage", this.handleStorage);
     this.notifyListeners();
   }
-
-  private handleUserPresence = () => {
-    if (this.isPaused) return;
-
+  public getRejectedObservations(): RejectedObservation[] { return this.uploads.getRejectedObservations(); }
+  public flushPendingObservations(): Promise<void> { return this.uploads.flush(); }
+  public retryPendingObservations(): Promise<void> { return this.uploads.retry(); }
+  private enqueue(end: number, activeSeconds: number, isBreak: boolean) {
+    const settings = this.settings!;
+    const position = workSchedulePosition(isBreak ? end : end - 1, { timeZone: settings.profile.timezone, ...settings.twin });
+    if (settings.telemetry.excludeWeekendActivity && !position.scheduledDay) return;
+    this.uploads.enqueue({
+      eventId: crypto.randomUUID(), employeeId: this.employeeId,
+      // Personal scope until organization membership is verified by server authentication.
+      organizationId: `personal:${this.employeeId}`,
+      timestamp: new Date(end).toISOString(), activeSeconds, isBreak,
+      isEvening: settings.telemetry.autoCaptureAfterHours && !position.inWorkHours,
+      afterHoursObserved: settings.telemetry.autoCaptureAfterHours,
+      meetingMinutes: 0, source: "workstation",
+    });
+  }
+  private captureUntil(now: number) {
+    const start = this.lastSample;
+    this.lastSample = now;
+    if (!this.isRunning || this.isPaused || !this.focused || !start || now <= start) return;
+    if (getLocalSessionUser()?.role !== "employee" || getLocalSessionUser()?.id !== this.employeeId) return;
+    // A suspended/throttled browser cannot establish presence during a long gap.
+    if (now - start > 90000) { this.focusStreak = 0; return; }
+    const settings = this.settings!;
+    if (!settings.telemetry.heartbeatTrackerEnabled) return;
+    const idleMs = Math.max(1, settings.telemetry.inactivityThresholdMinutes) * 60000;
+    const end = Math.min(now, this.lastPresence + idleMs);
+    let cursor = start;
+    // Split at minute boundaries so schedule changes and midnight use the correct interval.
+    while (cursor < end) {
+      const segmentEnd = Math.min(end, (Math.floor(cursor / 60000) + 1) * 60000);
+      const duration = (segmentEnd - cursor) / 1000;
+      this.enqueue(segmentEnd, duration, false);
+      this.focusStreak += duration;
+      cursor = segmentEnd;
+    }
+    if (now > end) { this.awaySince ??= end; this.focusStreak = 0; }
+  }
+  private handlePresence = () => {
+    if (!this.isRunning || this.isPaused) return;
     const now = Date.now();
-    // Check if returning from a break (>= 5 minutes away)
-    if (this.lastAwayTimestamp && now - this.lastAwayTimestamp >= 5 * 60 * 1000) {
-      this.hasPendingBreak = true;
-    }
-    this.lastAwayTimestamp = null;
-    this.lastActivityTimestamp = now;
+    const idleMs = Math.max(1, this.settings!.telemetry.inactivityThresholdMinutes) * 60000;
+    const returning = this.awaySince !== null || now - this.lastPresence >= idleMs;
+    // Frequent pointer events prove continuing presence; they do not each need a
+    // packet. Close a previous interval only when returning after an idle/away gap.
+    if (returning) this.captureUntil(now);
+    const awaySince = this.awaySince ?? this.lastPresence;
+    if (now - awaySince >= idleMs) this.enqueue(now, 0, true);
+    this.awaySince = null;
+    this.lastPresence = now;
+    if (returning) this.lastSample = now;
   };
-
   private handleFocus = () => {
-    this.handleUserPresence();
+    this.handlePresence();
+    this.focused = !document.hidden;
   };
-
   private handleBlur = () => {
-    this.lastAwayTimestamp = Date.now();
+    this.captureUntil(Date.now());
+    this.focused = false;
+    this.awaySince ??= Date.now();
+    this.focusStreak = 0;
   };
-
   private handleVisibilityChange = () => {
-    if (document.hidden) {
-      this.lastAwayTimestamp = Date.now();
-    } else {
-      this.handleUserPresence();
-    }
+    if (document.hidden) this.handleBlur();
+    else if (document.hasFocus()) this.handleFocus();
   };
-
+  private handleSettings = () => {
+    if (!this.isRunning || getLocalSessionUser()?.id !== this.employeeId || getLocalSessionUser()?.role !== "employee") return;
+    // Finish the preceding interval under its original preferences.
+    this.captureUntil(Date.now());
+    this.settings = structuredClone(getUserSettings(this.employeeId));
+    if (this.settings.telemetry.heartbeatTrackerEnabled) this.resume();
+    else this.pause();
+  };
+  private handleStorage = (event: StorageEvent) => {
+    if (!event.key || event.key === "wellness-auth-user") this.handleAuthUpdate();
+    if (!event.key || event.key === userSettingsKey(this.employeeId)) this.handleSettings();
+  };
+  private handleAuthUpdate = () => {
+    if (getLocalSessionUser()?.role !== "employee" || getLocalSessionUser()?.id !== this.employeeId) this.stop();
+  };
   private async tickAndDispatch() {
-    if (!this.isRunning || this.isPaused || typeof window === "undefined") return;
-
-    // If tab is currently hidden, skip active focus accumulation
-    if (document.hidden) {
-      return;
+    if (!this.isRunning) return;
+    if (getLocalSessionUser()?.role !== "employee" || getLocalSessionUser()?.id !== this.employeeId) { this.stop(); return; }
+    const latest = getUserSettings(this.employeeId);
+    const fingerprint = (settings: UserSettingsState) => JSON.stringify({ timezone: settings.profile.timezone,
+      start: settings.twin.workdayStart, end: settings.twin.workdayEnd, days: settings.twin.workDays, telemetry: settings.telemetry });
+    if (fingerprint(latest) !== fingerprint(this.settings!)) {
+      // A missed cross-tab change has no reliable transition time. Drop the open
+      // interval rather than collecting through an unknown pause or schedule change.
+      this.settings = structuredClone(latest);
+      this.lastSample = this.lastPresence = Date.now(); this.focusStreak = 0;
+      this.isPaused = !latest.telemetry.heartbeatTrackerEnabled;
+      this.uploads.setPaused(this.isPaused);
     }
-
-    const activeChunk = 60; // 60 seconds
-    this.accumulatedActiveSeconds += activeChunk;
-    if (this.hasPendingBreak) {
-      this.todayBreaks += 1;
-    }
-    this.lastActivityTimestamp = Date.now();
-    this.saveStateToStorage();
-
-    const user = getLocalSessionUser();
-    const employeeId = user?.id || "usr-ronnie";
-    const hour = new Date().getHours();
-    const isEvening = hour >= 19 || hour < 6;
-
-    const payload = {
-      employeeId,
-      organizationId: "org_acme_technologies",
-      timestamp: new Date().toISOString(),
-      activeSeconds: activeChunk,
-      isBreak: this.hasPendingBreak,
-      isEvening,
-      source: "workstation",
-    };
-
-    // Reset pending break flag
-    this.hasPendingBreak = false;
-
-    try {
-      const response = await fetch("/api/telemetry/heartbeat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.summary?.todayMetrics) {
-          saveEmployeeMetrics(data.summary.todayMetrics);
-        }
-        console.log("⚡ [TELEMETRY PACKET RECORDED]:", {
-          activeMinutesToday: data.summary?.todayActiveMinutes ?? 0,
-          breaksToday: data.summary?.todayBreakCount ?? 0,
-          timestamp: payload.timestamp,
-        });
-        // Dispatch custom browser event for reactive UI updates
-        window.dispatchEvent(
-          new CustomEvent("wellness-telemetry-update", { detail: data.summary })
-        );
-      }
-    } catch (err) {
-      console.warn("[HEARTBEAT DISPATCH FAILED]:", err);
-    }
-
+    if (this.isPaused) { this.notifyListeners(); return; }
+    this.captureUntil(Date.now());
+    await this.uploads.flush();
     this.notifyListeners();
   }
 }
-
 export const workstationTracker = new WorkstationTrackerService();

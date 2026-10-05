@@ -53,7 +53,7 @@ export default function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <div className="lg:hidden">
+    <div className="md:hidden">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}

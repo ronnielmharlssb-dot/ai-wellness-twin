@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  ArrowRight,
   Lightbulb,
   Sparkles,
   HeartHandshake,
   CheckCircle2,
   Clock,
-  Calendar,
   Moon,
   Coffee,
   Check,
@@ -19,30 +17,21 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-import { getMetricsForEmployee } from "@/lib/wellbeing/employeeMetrics";
-import { buildEmployeeAssessment } from "@/lib/wellbeing/employeeAssessment";
 import {
   buildRecommendations,
-  type Recommendation,
 } from "@/lib/wellbeing/recommendationEngine";
-import { getLocalSessionUser } from "@/lib/supabase/auth";
+import { useEmployeeAssessment } from "@/components/use-employee-assessment";
+import { AssessmentEvidence } from "@/components/ui/assessment-evidence";
 
 type RecTab = "all" | "focus" | "breaks" | "habits";
 
 export default function RecommendationsPage() {
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [isBuilding, setIsBuilding] = useState(false);
+  const assessment = useEmployeeAssessment();
+  const recommendations = assessment ? buildRecommendations(assessment) : [];
+  const isBuilding = !assessment || assessment.status === "building";
   const [activeTab, setActiveTab] = useState<RecTab>("all");
   const [completedTitles, setCompletedTitles] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const user = getLocalSessionUser();
-    const employeeId = user?.id || "usr-ronnie";
-    const metrics = getMetricsForEmployee(employeeId);
-    const assessment = buildEmployeeAssessment(metrics);
-    setIsBuilding(assessment.status === "building");
-    setRecommendations(buildRecommendations(assessment));
-  }, []);
 
   const toggleComplete = (title: string) => {
     setCompletedTitles((prev) => {
@@ -142,6 +131,7 @@ export default function RecommendationsPage() {
 
         {/* Right Content Panel */}
         <div className="lg:col-span-9 space-y-6">
+          <AssessmentEvidence assessment={assessment} />
           {isBuilding ? (
             <Card className="p-8 text-center">
               <Sparkles className="mx-auto h-8 w-8 text-amber-500 animate-pulse" />
@@ -156,10 +146,10 @@ export default function RecommendationsPage() {
             <Card className="p-8 text-center">
               <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-500" />
               <p className="mt-3 text-base font-bold text-slate-900 dark:text-slate-100">
-                Your Work Pacing is Balanced
+                No recorded shifts in this selection
               </p>
               <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                Your recent work rhythms closely match your typical baseline. No special pacing adjustments needed right now!
+                Only metrics with sufficient observations are compared. Your own experience and recording coverage remain important.
               </p>
             </Card>
           ) : (

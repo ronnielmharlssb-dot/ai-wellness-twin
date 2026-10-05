@@ -29,8 +29,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   getLocalSessionUser,
-  saveRegisteredUser,
-  setLocalSessionUser,
   signOutUser,
   type AuthUser,
 } from "@/lib/supabase/auth";
@@ -45,13 +43,15 @@ import {
 } from "@/lib/theme/themeManager";
 import {
   getUserSettings,
+  getUserSettingsSnapshot,
+  type UserSettingsPatch,
   saveUserSettings,
   type UserSettingsState,
   type TwinPersona,
   type NudgeSensitivity,
   type UIDensity,
 } from "@/lib/settings/userSettings";
-import { workstationTracker } from "@/lib/telemetry/workstationTracker";
+import { AggregateSharing } from "@/components/ui/aggregate-sharing";
 
 type SettingsTab =
   | "profile"
@@ -81,11 +81,12 @@ export default function SettingsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [settings, setSettings] = useState<UserSettingsState>(getUserSettings());
+  const [settings, setSettings] = useState<UserSettingsState>(getUserSettings);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isTrackerRunning, setIsTrackerRunning] = useState(true);
+  const [isTrackerRunning, setIsTrackerRunning] = useState(() => getUserSettings().telemetry.heartbeatTrackerEnabled);
 
   // Form states
   const [profileForm, setProfileForm] = useState({
@@ -93,167 +94,89 @@ export default function SettingsPage() {
     email: "",
     jobTitle: "",
     department: "",
-    timezone: "UTC+08:00 (Singapore / Manila)",
+    timezone: "UTC",
   });
 
   useEffect(() => {
-    const user = getLocalSessionUser();
-    setCurrentUser(user);
-
-    const initialSettings = getUserSettings();
-    setSettings(initialSettings);
-
-    const currentTheme = getStoredThemePreference();
-    setThemeMode(currentTheme);
-
-    const trackerState = workstationTracker.getState();
-    setIsTrackerRunning(trackerState.isRunning && !trackerState.isPaused);
-
-    if (user) {
-      setProfileForm({
-        fullName: user.fullName || initialSettings.profile.fullName,
-        email: user.email || initialSettings.profile.email,
-        jobTitle: initialSettings.profile.jobTitle || "Senior Software Engineer",
-        department: initialSettings.profile.department || "Product & Engineering",
-        timezone: initialSettings.profile.timezone || "UTC+08:00 (Singapore / Manila)",
-      });
-    }
+    const load = () => {
+      const user = getLocalSessionUser();
+      const snapshot = getUserSettingsSnapshot();
+      setCurrentUser(user); setSettings(snapshot.settings); setSettingsError(snapshot.error ?? null);
+      setThemeMode(getStoredThemePreference());
+      setIsTrackerRunning(snapshot.settings.telemetry.heartbeatTrackerEnabled);
+      setProfileForm({ ...snapshot.settings.profile });
+    };
+    load();
+    window.addEventListener("wellness-auth-update", load);
+    window.addEventListener("wellness-settings-updated", load);
+    window.addEventListener("storage", load);
+    return () => {
+      window.removeEventListener("wellness-auth-update", load);
+      window.removeEventListener("wellness-settings-updated", load);
+      window.removeEventListener("storage", load);
+    };
   }, []);
 
   const isHR = currentUser?.role === "hr";
-
-  const showToast = (msg: string) => {
-    setActionMessage(msg);
-    setTimeout(() => setActionMessage(null), 3500);
+  const hasHRDemoTools = isHR && currentUser?.source === "demo";
+  const showToast = (message: string) => { setActionMessage(message); setTimeout(() => setActionMessage(null), 3500); };
+  const savePreferences = (patch: UserSettingsPatch): boolean => {
+    if (!currentUser) { setSettingsError("Sign in before saving your preferences."); return false; }
+    try {
+      const updated = saveUserSettings(patch, currentUser.id);
+      setSettings(updated); setSettingsError(null);
+      setIsTrackerRunning(updated.telemetry.heartbeatTrackerEnabled);
+      return true;
+    } catch (error) { setSettingsError(error instanceof Error ? error.message : "Preferences could not be saved."); return false; }
   };
-
-  // Profile Save
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser) return;
-
-    const updatedUser: AuthUser = {
-      ...currentUser,
-      fullName: profileForm.fullName.trim() || currentUser.fullName,
-      email: profileForm.email.trim() || currentUser.email,
-    };
-
-    saveRegisteredUser(updatedUser);
-    setLocalSessionUser(updatedUser);
-    setCurrentUser(updatedUser);
-
-    saveUserSettings({
-      profile: {
-        fullName: updatedUser.fullName,
-        email: updatedUser.email,
-        jobTitle: profileForm.jobTitle,
-        department: profileForm.department,
-        timezone: profileForm.timezone,
-      },
-    });
-
-    window.dispatchEvent(new CustomEvent("wellness-auth-update", { detail: updatedUser }));
-    showToast("Profile information updated successfully.");
-  };
-
-  // Theme Change
-  const handleThemeChange = (newMode: ThemeMode) => {
-    setThemeMode(newMode);
-    setStoredThemePreference(newMode);
-    saveUserSettings({ appearance: { ...settings.appearance, themeMode: newMode } });
-    const label =
-      newMode === "dark"
-        ? "Dark mode activated"
-        : newMode === "light"
-        ? "Light mode activated"
-        : "System preference synchronized";
-    showToast(label);
-  };
-
-  // Appearance Options
-  const handleDensityChange = (density: UIDensity) => {
-    const updated = { ...settings.appearance, uiDensity: density };
-    setSettings((prev) => ({ ...prev, appearance: updated }));
-    saveUserSettings({ appearance: updated });
-    showToast(`Interface density set to ${density}.`);
-  };
-
-  const handleToggleContrast = () => {
-    const updated = {
-      ...settings.appearance,
-      highContrastIndicators: !settings.appearance.highContrastIndicators,
-    };
-    setSettings((prev) => ({ ...prev, appearance: updated }));
-    saveUserSettings({ appearance: updated });
-    showToast(
-      updated.highContrastIndicators
-        ? "High-contrast status indicators enabled."
-        : "Standard status indicators restored."
-    );
-  };
-
-  // Twin Settings
-  const handlePersonaChange = (persona: TwinPersona) => {
-    const updated = { ...settings.twin, persona };
-    setSettings((prev) => ({ ...prev, twin: updated }));
-    saveUserSettings({ twin: updated });
-    showToast(`Twin persona updated to: ${persona.charAt(0).toUpperCase() + persona.slice(1)}.`);
-  };
-
-  const handleSensitivityChange = (nudgeSensitivity: NudgeSensitivity) => {
-    const updated = { ...settings.twin, nudgeSensitivity };
-    setSettings((prev) => ({ ...prev, twin: updated }));
-    saveUserSettings({ twin: updated });
-    showToast(`Pacing nudge sensitivity set to: ${nudgeSensitivity}.`);
-  };
-
-  const handleWorkDayToggle = (day: string) => {
-    const current = settings.twin.workDays;
-    const nextDays = current.includes(day)
-      ? current.filter((d) => d !== day)
-      : [...current, day];
-    const updated = { ...settings.twin, workDays: nextDays };
-    setSettings((prev) => ({ ...prev, twin: updated }));
-    saveUserSettings({ twin: updated });
-  };
-
-  const handleTwinScheduleChange = (field: "workdayStart" | "workdayEnd" | "maxDailyMeetingHours", value: string | number) => {
-    const updated = { ...settings.twin, [field]: value };
-    setSettings((prev) => ({ ...prev, twin: updated }));
-    saveUserSettings({ twin: updated });
-  };
-
-  // Telemetry Tracker
-  const handleToggleTracker = () => {
-    if (isTrackerRunning) {
-      workstationTracker.pause();
-      setIsTrackerRunning(false);
-      showToast("Workstation telemetry tracking paused.");
-    } else {
-      workstationTracker.resume();
-      setIsTrackerRunning(true);
-      showToast("Workstation telemetry tracking resumed.");
+  const handleSaveProfile = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (savePreferences({ profile: { jobTitle: profileForm.jobTitle, department: profileForm.department, timezone: profileForm.timezone } })) {
+      showToast("Personal profile preferences saved in this browser. Account identity is unchanged.");
     }
   };
-
-  const handleToggleTelemetrySetting = (key: keyof typeof settings.telemetry) => {
-    const updated = { ...settings.telemetry, [key]: !settings.telemetry[key] };
-    setSettings((prev) => ({ ...prev, telemetry: updated }));
-    saveUserSettings({ telemetry: updated });
-    showToast("Telemetry preference saved.");
+  const handleThemeChange = (newMode: ThemeMode) => {
+    if (!savePreferences({ appearance: { themeMode: newMode } })) return;
+    setStoredThemePreference(newMode); setThemeMode(newMode);
+    showToast("Color scheme updated for this browser.");
   };
-
-  // Notification Toggles
+  const handleDensityChange = (density: UIDensity) => {
+    if (savePreferences({ appearance: { uiDensity: density } })) showToast("Interface density preference saved.");
+  };
+  const handleToggleContrast = () => {
+    if (savePreferences({ appearance: { highContrastIndicators: !settings.appearance.highContrastIndicators } })) showToast("Contrast preference saved.");
+  };
+  const handlePersonaChange = (persona: TwinPersona) => {
+    if (savePreferences({ twin: { persona } })) showToast("Persona preference saved. Reflection voice customization is not active yet.");
+  };
+  const handleSensitivityChange = (nudgeSensitivity: NudgeSensitivity) => {
+    if (savePreferences({ twin: { nudgeSensitivity } })) showToast("Sensitivity preference saved. Recorded-shift detection currently uses its documented 20% threshold.");
+  };
+  const handleWorkDayToggle = (day: string) => {
+    const current = settings.twin.workDays;
+    savePreferences({ twin: { workDays: current.includes(day) ? current.filter(value => value !== day) : [...current, day] } });
+  };
+  const handleTwinScheduleChange = (field: "workdayStart" | "workdayEnd" | "maxDailyMeetingHours", value: string | number) => {
+    savePreferences({ twin: { [field]: value } });
+  };
+  const handleToggleTracker = () => {
+    if (savePreferences({ telemetry: { heartbeatTrackerEnabled: !settings.telemetry.heartbeatTrackerEnabled } })) {
+      showToast(settings.telemetry.heartbeatTrackerEnabled ? "Collection paused for this account in this browser." : "Collection enabled when this account's dashboard is open.");
+    }
+  };
+  const handleToggleTelemetrySetting = (key: keyof typeof settings.telemetry) => {
+    if (key === "inactivityThresholdMinutes") return;
+    if (savePreferences({ telemetry: { [key]: !settings.telemetry[key] } })) showToast("Collection preference saved for this account.");
+  };
   const handleToggleNotification = (key: keyof typeof settings.notifications) => {
-    const updated = { ...settings.notifications, [key]: !settings.notifications[key] };
-    setSettings((prev) => ({ ...prev, notifications: updated }));
-    saveUserSettings({ notifications: updated });
-    showToast("Notification preferences updated.");
+    if (savePreferences({ notifications: { [key]: !settings.notifications[key] } })) showToast("Preference saved. Scheduled alert delivery is not implemented.");
   };
 
   // Data Export
   const handleExportData = () => {
-    const employeeId = currentUser?.id || "usr-ronnie";
+    const user = getLocalSessionUser();
+    if (!currentUser || user?.id !== currentUser.id || user.role !== "employee") { showToast("Your employee session is required."); return; }
+    const employeeId = user.id;
     const metrics = getMetricsForEmployee(employeeId);
 
     const exportPayload = {
@@ -274,20 +197,20 @@ export default function SettingsPage() {
     downloadAnchor.click();
     downloadAnchor.remove();
 
-    showToast("Personal behavioral data exported to JSON.");
+    showToast("Browser-cached personal observations exported to JSON.");
   };
 
-  // Reset Personal Baseline
+  // Clearing a display cache does not delete authoritative cloud observations.
   const handleResetPersonalBaseline = () => {
-    const employeeId = currentUser?.id || "usr-ronnie";
-    if (
-      window.confirm(
-        "Are you sure you want to reset your baseline? This will clear your historical observations and begin a fresh 28-day calibration cycle."
-      )
-    ) {
-      clearEmployeeMetrics(employeeId);
-      showToast("Personal baseline reset. Fresh 28-day calibration initiated.");
-    }
+    const user = getLocalSessionUser();
+    if (!currentUser || user?.id !== currentUser.id || user.role !== "employee") { showToast("Your employee session is required."); return; }
+    const demo = user.source === "demo";
+    if (!window.confirm(demo ? "Clear this demo account's local observations?" : "Clear this account's browser display cache? Cloud observations and queued uploads will remain.")) return;
+    try {
+      clearEmployeeMetrics(user.id);
+      window.dispatchEvent(new CustomEvent("wellness-telemetry-update"));
+      showToast(demo ? "Demo observations cleared." : "Browser display cache cleared. Cloud history reloads on your next dashboard visit.");
+    } catch { showToast("The browser display cache could not be cleared."); }
   };
 
   // HR Clear Employee Baseline
@@ -308,7 +231,9 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f8fa] py-8 sm:py-10 dark:bg-[#20201e] transition-colors duration-300">
-      <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6">
+      <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {settingsError && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">{settingsError}</p>}
+        <p className="text-xs text-slate-500">Personal collection preferences are account-specific in this browser. The color scheme is shared on this browser. Persona customization and scheduled alerts are not active yet.</p>
         
         {/* Navigation & Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -398,7 +323,7 @@ export default function SettingsPage() {
                 icon={<ShieldCheck className="h-4 w-4" />}
                 label="Privacy & Data"
               />
-              {isHR && (
+              {hasHRDemoTools && (
                 <TabButton
                   active={activeTab === "hr"}
                   onClick={() => setActiveTab("hr")}
@@ -442,7 +367,7 @@ export default function SettingsPage() {
                         Profile Details
                       </h2>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Update your employee identity and workplace metadata.
+                        Name and email come from your signed-in account. Editable preferences stay in this browser and do not establish organization membership.
                       </p>
                     </div>
                     <Badge variant="positive">Active Session</Badge>
@@ -458,7 +383,7 @@ export default function SettingsPage() {
                           {profileForm.fullName || "Team Member"}
                         </p>
                         <p className="text-xs text-slate-400 dark:text-slate-500">
-                          Account ID: {currentUser?.id || "usr-ronnie"}
+                          Account ID: {currentUser?.id ?? "Unavailable"}
                         </p>
                         <span className="mt-1 inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                           {currentUser?.role || "employee"}
@@ -474,6 +399,7 @@ export default function SettingsPage() {
                         <input
                           type="text"
                           value={profileForm.fullName}
+                          readOnly
                           onChange={(e) =>
                             setProfileForm((prev) => ({ ...prev, fullName: e.target.value }))
                           }
@@ -489,6 +415,7 @@ export default function SettingsPage() {
                         <input
                           type="email"
                           value={profileForm.email}
+                          readOnly
                           onChange={(e) =>
                             setProfileForm((prev) => ({ ...prev, email: e.target.value }))
                           }
@@ -532,6 +459,7 @@ export default function SettingsPage() {
                         <input
                           type="text"
                           value={profileForm.timezone}
+                          placeholder="Asia/Singapore"
                           onChange={(e) =>
                             setProfileForm((prev) => ({ ...prev, timezone: e.target.value }))
                           }
@@ -543,7 +471,7 @@ export default function SettingsPage() {
                     <div className="flex justify-end pt-2">
                       <Button type="submit" className="flex items-center gap-2 text-xs">
                         <Save className="h-3.5 w-3.5" />
-                        Save Profile Changes
+                        Save Personal Preferences
                       </Button>
                     </div>
                   </form>
@@ -934,15 +862,15 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-2">
                         <div
                           className={`h-2.5 w-2.5 rounded-full ${
-                            isTrackerRunning ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                            isTrackerRunning ? "bg-emerald-500" : "bg-amber-500"
                           }`}
                         />
                         <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                          Workstation Telemetry Sensor
+                          Browser Collection Preference
                         </h2>
                       </div>
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        Zero-knowledge background heartbeat observing binary active workstation timestamps.
+                        When enabled, the dashboard records browser presence intervals. This preference persists for your account in this browser.
                       </p>
                     </div>
 
@@ -952,7 +880,7 @@ export default function SettingsPage() {
                         onClick={handleToggleTracker}
                         className="text-xs"
                       >
-                        {isTrackerRunning ? "Pause Telemetry" : "Resume Telemetry"}
+                        {isTrackerRunning ? "Pause Collection" : "Enable Collection"}
                       </Button>
                     </div>
                   </div>
@@ -1029,10 +957,10 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between py-3">
                       <div>
                         <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                          Exclude Weekend Heartbeats
+                          Exclude Unselected Workdays
                         </p>
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          Mutes telemetry logging on non-work days.
+                          Skips browser recording on unselected workdays in your configured timezone.
                         </p>
                       </div>
                       <button
@@ -1210,15 +1138,16 @@ export default function SettingsPage() {
                ========================================================================= */}
             {activeTab === "privacy" && (
               <div className="space-y-6 animate-in fade-in duration-200">
+                {currentUser?.role === "employee" && currentUser.source === "supabase" && <AggregateSharing />}
                 {/* Data Export Card */}
-                <Card className="p-6">
+                {currentUser?.role === "employee" && <Card className="p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                         Self-Service Data Export
                       </h2>
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        You own your behavioral data. Download your complete 28-day historical records at any time.
+                        Export this account’s browser-cached observations. A cache export may not contain every cloud record; clearing it does not delete cloud history.
                       </p>
                     </div>
                     <Badge variant="positive">Employee Owned</Badge>
@@ -1227,7 +1156,7 @@ export default function SettingsPage() {
                   <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
                     <Button onClick={handleExportData} className="flex items-center gap-2 text-xs">
                       <Download className="h-3.5 w-3.5" />
-                      Export My Data (JSON)
+                      Export Browser Cache (JSON)
                     </Button>
                     <Button
                       variant="outline"
@@ -1235,10 +1164,10 @@ export default function SettingsPage() {
                       className="flex items-center gap-2 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                      Reset My Personal Baseline
+                      {currentUser?.source === "demo" ? "Clear Demo Observations" : "Clear Browser Display Cache"}
                     </Button>
                   </div>
-                </Card>
+                </Card>}
 
                 {/* Transparency & Strict Prohibitions */}
                 <Card className="p-6">
@@ -1302,7 +1231,7 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                      Organizational Privacy & k-Anonymity Guarantees
+                      Group sharing and personal baselines
                     </h3>
                   </div>
 
@@ -1311,7 +1240,7 @@ export default function SettingsPage() {
                       <strong className="text-slate-900 dark:text-slate-200">1. Individual Confidentiality:</strong> Your personal baseline, daily scores, and reflection answers are private to you. They are never displayed on HR portals or dashboards.
                     </p>
                     <p>
-                      <strong className="text-slate-900 dark:text-slate-200">2. k-Anonymity Threshold (k ≥ 3):</strong> HR aggregate trends are only calculated for groups with at least 3 eligible members to prevent deducing any individual&apos;s state.
+                      <strong className="text-slate-900 dark:text-slate-200">2. Contributor threshold (k ≥ 3):</strong> Verified organization aggregates require at least three consenting employees with a baseline for each released metric. Missing observations are withheld. The HR demonstration uses separate browser samples.
                     </p>
                     <p>
                       <strong className="text-slate-900 dark:text-slate-200">3. Non-Comparative Baselines:</strong> You are only evaluated against your own 28-day historical pattern, never ranked against colleagues.
@@ -1324,7 +1253,7 @@ export default function SettingsPage() {
             {/* =========================================================================
                TAB 7: HR ADMINISTRATION (Role-guarded)
                ========================================================================= */}
-            {activeTab === "hr" && isHR && (
+            {activeTab === "hr" && hasHRDemoTools && (
               <div className="space-y-6 animate-in fade-in duration-200">
                 <Card className="p-6">
                   <div className="flex items-start justify-between gap-4">

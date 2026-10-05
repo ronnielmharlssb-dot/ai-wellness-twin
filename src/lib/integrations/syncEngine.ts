@@ -1,169 +1,25 @@
-import type { IntegrationConnection, IntegrationProvider, SyncResult } from "./types";
+import type { IntegrationProvider, SyncResult } from "./types";
 import { fetchGitHubSignals } from "./githubConnector";
 import { parseCalendarBlocksToSignals, type CalendarEventBlock } from "./calendarConnector";
 import { signalToMetrics } from "../signals/metricsMapper";
 import { saveEmployeeMetricsBatch } from "../wellbeing/employeeMetrics";
 import type { EmployeeSignal } from "../signals/types";
+import { getUserSettings } from "../settings/userSettings";
+import { getLocalSessionUser } from "../supabase/auth";
+import { sourceImportQueue } from "./sourceImportQueue";
+import { markImportState } from "./integrationStore";
 
-const INTEGRATIONS_STORAGE_KEY = "wellness-integrations-config";
+type SyncConfig = {
+  username?: string;
+  workspaceName?: string;
+  calendarEmail?: string;
+  email?: string;
+  calendarEvents?: CalendarEventBlock[];
+  calendarCoverage?: { start: string; end: string };
+};
 
-export const DEFAULT_INTEGRATIONS: IntegrationConnection[] = [
-  // 1. Code & Development
-  {
-    id: "int-github",
-    provider: "github",
-    name: "GitHub",
-    category: "Code & Development",
-    description: "Observes commit and PR review timestamps to measure active development hours and evening coding patterns.",
-    connected: true,
-    config: {
-      username: "ronnielmharlssb-dot",
-      accountLabel: "github.com/ronnielmharlssb-dot",
-    },
-  },
-  {
-    id: "int-vscode",
-    provider: "vscode",
-    name: "Visual Studio Code",
-    category: "Code & Development",
-    description: "Observes editor focus time, coding session durations, and micro-pauses without reading source code.",
-    connected: true,
-    config: {
-      workspaceName: "ai-wellness-twin",
-      accountLabel: "ai-wellness-twin workspace",
-    },
-  },
-
-  // 2. AI Assistants & Research
-  {
-    id: "int-chatgpt",
-    provider: "chatgpt",
-    name: "ChatGPT (OpenAI)",
-    category: "AI Assistants & Research",
-    description: "Observes AI assistance session timestamps to measure cognitive offloading and problem-solving focus windows.",
-    connected: false,
-    config: {
-      workspaceName: "",
-    },
-  },
-  {
-    id: "int-gemini",
-    provider: "gemini",
-    name: "Google Gemini",
-    category: "AI Assistants & Research",
-    description: "Observes Gemini research & analysis session windows to track workflow augmentation and focus intensity.",
-    connected: true,
-    config: {
-      workspaceName: "Gemini 3.7 Flash Assistant",
-      accountLabel: "Google Gemini AI Active",
-    },
-  },
-  {
-    id: "int-claude",
-    provider: "claude",
-    name: "Claude (Anthropic)",
-    category: "AI Assistants & Research",
-    description: "Observes Claude writing and reasoning session windows to measure cognitive pacing and deep-work duration.",
-    connected: false,
-    config: {
-      workspaceName: "",
-    },
-  },
-
-  // 3. Calendar & Meetings
-  {
-    id: "int-calendar",
-    provider: "google_calendar",
-    name: "Google Calendar / Outlook",
-    category: "Calendar & Meetings",
-    description: "Observes meeting durations and buffer gaps to measure meeting fatigue and rest breaks.",
-    connected: false,
-    config: {
-      calendarEmail: "",
-    },
-  },
-
-  // 4. Design & Creative
-  {
-    id: "int-figma",
-    provider: "figma",
-    name: "Figma & Design Tools",
-    category: "Design & Creative",
-    description: "Observes design file activity windows to estimate creative focus blocks.",
-    connected: false,
-    config: {
-      workspaceName: "",
-    },
-  },
-
-  // 5. Communication
-  {
-    id: "int-slack",
-    provider: "slack",
-    name: "Slack & Messaging",
-    category: "Communication",
-    description: "Observes workplace messaging active windows to protect the right-to-disconnect outside core hours.",
-    connected: false,
-    config: {
-      workspaceName: "",
-    },
-  },
-  {
-    id: "int-discord",
-    provider: "discord",
-    name: "Discord",
-    category: "Communication",
-    description: "Observes team and community voice/chat activity windows to safeguard late-night disconnection.",
-    connected: false,
-    config: {
-      workspaceName: "",
-    },
-  },
-];
-
-function getStorageKey(employeeId?: string): string {
-  if (typeof window === "undefined") return INTEGRATIONS_STORAGE_KEY;
-  try {
-    const activeUserId = employeeId || (JSON.parse(localStorage.getItem("wellness-auth-user") || "{}")?.id) || "usr-ronnie";
-    return `${INTEGRATIONS_STORAGE_KEY}:${activeUserId}`;
-  } catch {
-    return INTEGRATIONS_STORAGE_KEY;
-  }
-}
-
-export function getStoredIntegrations(employeeId?: string): IntegrationConnection[] {
-  if (typeof window === "undefined") {
-    return DEFAULT_INTEGRATIONS;
-  }
-
-  try {
-    const key = getStorageKey(employeeId);
-    let saved = localStorage.getItem(key);
-    // Backward compatibility fallback to legacy global key if user key is not yet populated
-    if (!saved) {
-      saved = localStorage.getItem(INTEGRATIONS_STORAGE_KEY);
-    }
-    if (!saved) return DEFAULT_INTEGRATIONS;
-
-    const parsed: IntegrationConnection[] = JSON.parse(saved);
-    const existingIds = new Set(parsed.map((p) => p.provider));
-    const merged = [...parsed];
-    DEFAULT_INTEGRATIONS.forEach((def) => {
-      if (!existingIds.has(def.provider)) {
-        merged.push(def);
-      }
-    });
-    return merged;
-  } catch {
-    return DEFAULT_INTEGRATIONS;
-  }
-}
-
-export function saveStoredIntegrations(integrations: IntegrationConnection[], employeeId?: string) {
-  if (typeof window === "undefined") return;
-  const key = getStorageKey(employeeId);
-  localStorage.setItem(key, JSON.stringify(integrations));
-}
+import { getStoredIntegrations, saveStoredIntegrations } from "./integrationStore";
+export { DEFAULT_INTEGRATIONS, getStoredIntegrations, saveStoredIntegrations } from "./integrationStore";
 
 export function validateGoogleAccount(email: string): boolean {
   if (!email || !email.includes("@")) return false;
@@ -186,8 +42,11 @@ export function validateDiscordHandle(handle: string): boolean {
 export async function syncProvider(
   provider: IntegrationProvider,
   employeeId: string,
-  config: Record<string, string | undefined>
+  config: SyncConfig
 ): Promise<SyncResult> {
+  const capturedAt = provider === "google_calendar" && config.calendarCoverage ? config.calendarCoverage.end : new Date().toISOString();
+  const session = getLocalSessionUser();
+  if (!session || session.id !== employeeId || session.role !== "employee") throw new Error("Sign in to your own employee account before syncing.");
   let signals: EmployeeSignal[] = [];
   let connectedAccountLabel = "";
 
@@ -223,7 +82,7 @@ export async function syncProvider(
     case "gemini": {
       const email = config.workspaceName?.trim();
       if (!email || !validateGoogleAccount(email)) {
-        throw new Error("Google Identity Verification Failed: Please enter an existing, valid Google Account email (e.g. you@gmail.com or you@company.com).");
+        throw new Error("A valid Google account email is required.");
       }
       connectedAccountLabel = email;
       break;
@@ -241,11 +100,17 @@ export async function syncProvider(
     case "google_calendar": {
       const email = config.calendarEmail?.trim() || config.email?.trim();
       if (!email || !validateGoogleAccount(email)) {
-        throw new Error("Google Account Verification Failed: Please enter a verified, existing Google / Outlook calendar email (e.g. you@company.com).");
+        throw new Error("A valid Google Calendar account email is required.");
       }
-      const rawEvents = (config.calendarEvents as unknown as CalendarEventBlock[]) || [];
-      if (rawEvents.length > 0) {
-        signals = parseCalendarBlocksToSignals(employeeId, rawEvents);
+      const rawEvents = config.calendarEvents || [];
+      if (config.calendarEvents !== undefined) {
+        const settings = getUserSettings(employeeId);
+        signals = parseCalendarBlocksToSignals(employeeId, rawEvents, {
+          workdayStart: settings.twin.workdayStart, workdayEnd: settings.twin.workdayEnd,
+          timeZone: settings.profile?.timezone, workDays: settings.twin.workDays,
+          afterHoursObserved: settings.telemetry?.autoCaptureAfterHours !== false,
+          coverage: config.calendarCoverage,
+        });
       }
       connectedAccountLabel = email;
       break;
@@ -280,23 +145,42 @@ export async function syncProvider(
   }
 
   // Save genuine incoming tool signals if any real events were retrieved
+  if (getLocalSessionUser()?.id !== employeeId) throw new Error("Your active account changed during the sync.");
+  let queuedBatch: string | null = null;
   if (signals.length > 0) {
     const dailyMetrics = signals.map(signalToMetrics);
-    saveEmployeeMetricsBatch(dailyMetrics);
+    if (session.source === "supabase") {
+      if (provider !== "github" && provider !== "google_calendar") throw new Error("Unsupported import source.");
+      queuedBatch = await sourceImportQueue.enqueue(employeeId, provider, dailyMetrics, capturedAt);
+    } else saveEmployeeMetricsBatch(dailyMetrics);
   }
 
-  const allIntegrations = getStoredIntegrations();
+  const { calendarEvents, calendarCoverage, ...accountConfig } = config;
+  // Coverage belongs to observations, not the linked account's identity.
+  void calendarCoverage;
+  const fetchedData = provider === "github" || (provider === "google_calendar" && calendarEvents !== undefined);
+  const allIntegrations = getStoredIntegrations(employeeId);
   const updated = allIntegrations.map((item) =>
     item.provider === provider
       ? {
           ...item,
           connected: true,
-          lastSyncedAt: new Date().toISOString(),
-          config: { ...item.config, ...config, accountLabel: connectedAccountLabel },
+          lastSyncedAt: fetchedData && !queuedBatch ? new Date().toISOString() : item.lastSyncedAt,
+          dataStatus: queuedBatch ? "pending" as const : fetchedData ? "synced" as const : "awaiting_data" as const,
+          ...(queuedBatch ? { lastImportCapturedAt: capturedAt } : {}),
+          config: { ...item.config, ...accountConfig, accountLabel: connectedAccountLabel },
         }
       : item
   );
-  saveStoredIntegrations(updated);
+  saveStoredIntegrations(updated, employeeId);
+  let outcome: "synced" | "pending" | "needs_review" = "synced";
+  if (queuedBatch) {
+    outcome = "pending";
+    try { outcome = await sourceImportQueue.upload(employeeId, queuedBatch); }
+    catch { /* Persisted imports remain queued if the device store is temporarily unavailable. */ }
+    if (getLocalSessionUser()?.id !== employeeId) throw new Error("Your active account changed during the sync. The import is retained for its original account.");
+    if (outcome !== "pending") markImportState(employeeId, provider, capturedAt, outcome);
+  }
 
   // Dispatch custom browser event for live telemetry UI updates
   if (typeof window !== "undefined") {
@@ -306,7 +190,14 @@ export async function syncProvider(
   return {
     provider,
     success: true,
-    daysSynced: signals.length,
-    message: `Connected ${connectedAccountLabel}: Live telemetry stream active.`,
+    daysSynced: outcome === "synced" ? signals.length : 0,
+    pending: outcome !== "synced",
+    message: outcome === "needs_review" ? "The import was rejected and retained for review. Open the queued imports notice for details."
+      : outcome === "pending" ? sourceImportQueue.hasUnsavedImports(employeeId)
+        ? "The import could not be saved on this device. Keep this page open and retry from the imports notice."
+        : `Queued ${signals.length} days from ${connectedAccountLabel}. Uploads will retry while you are signed in on the dashboard.`
+      : fetchedData
+      ? `Imported ${signals.length} days from ${connectedAccountLabel}.`
+      : `Linked ${connectedAccountLabel}. Waiting for measured activity from a collector.`,
   };
 }

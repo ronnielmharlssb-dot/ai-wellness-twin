@@ -24,6 +24,8 @@ export type IntegrationConnection = {
   description: string;
   connected: boolean;
   lastSyncedAt?: string;
+  dataStatus?: "awaiting_data" | "synced" | "pending" | "needs_review";
+  lastImportCapturedAt?: string;
   config: {
     username?: string;
     calendarEmail?: string;
@@ -37,5 +39,6 @@ export type SyncResult = {
   provider: IntegrationProvider;
   success: boolean;
   daysSynced: number;
+  pending?: boolean;
   message: string;
 };

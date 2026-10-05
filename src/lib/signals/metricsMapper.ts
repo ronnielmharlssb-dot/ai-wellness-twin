@@ -13,16 +13,14 @@ export function signalToMetrics(
     date: signal.date,
 
     source: (signal.source as EmployeeDailyMetrics["source"]) || "telemetry",
+    observedMetrics: signal.observedMetrics,
+    githubEventCount: signal.githubEventCount,
 
     workingHours:
-      Number(
-        (signal.activeMinutes / 60).toFixed(1)
-      ),
+      signal.activeMinutes / 60,
 
     meetingLoad:
-      Number(
-        (signal.meetingMinutes / 60).toFixed(1)
-      ),
+      signal.meetingMinutes / 60,
 
     breakFrequency:
       signal.breakCount,

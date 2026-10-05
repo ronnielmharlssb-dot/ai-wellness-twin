@@ -6,8 +6,30 @@ interface VerificationRecord {
   expiresAt: number;
 }
 
-// In-memory store for active verification codes with 10-minute expiry
-const activeCodes = new Map<string, VerificationRecord>();
+import fs from "fs";
+import path from "path";
+import os from "os";
+
+const ACTIVE_CODES_PATH = path.join(os.tmpdir(), "wellnessActiveCodes.json");
+
+function getActiveCodes(): Record<string, VerificationRecord> {
+  try {
+    if (fs.existsSync(ACTIVE_CODES_PATH)) {
+      return JSON.parse(fs.readFileSync(ACTIVE_CODES_PATH, "utf-8"));
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
+function saveActiveCodes(codes: Record<string, VerificationRecord>) {
+  try {
+    fs.writeFileSync(ACTIVE_CODES_PATH, JSON.stringify(codes));
+  } catch {
+    // ignore
+  }
+}
 
 function getSupabaseServerClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -35,10 +57,12 @@ export async function POST(req: Request) {
     if (action === "send") {
       const generatedPin = Math.floor(100000 + Math.random() * 900000).toString();
       
-      activeCodes.set(normalizedEmail, {
+      const codes = getActiveCodes();
+      codes[normalizedEmail] = {
         code: generatedPin,
         expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
-      });
+      };
+      saveActiveCodes(codes);
 
       // 1. Try sending real live email via Resend API if configured
       let realEmailSent = false;
@@ -115,12 +139,14 @@ export async function POST(req: Request) {
     // Action 2: Verify code submitted by user
     if (action === "verify") {
       const submittedCode = (code || "").trim();
-      const record = activeCodes.get(normalizedEmail);
+      const codes = getActiveCodes();
+      const record = codes[normalizedEmail];
 
       // Check 1: Check against locally stored verification record
       if (record && record.code === submittedCode) {
         if (Date.now() <= record.expiresAt) {
-          activeCodes.delete(normalizedEmail);
+          delete codes[normalizedEmail];
+          saveActiveCodes(codes);
           return NextResponse.json({
             success: true,
             verified: true,
@@ -138,7 +164,9 @@ export async function POST(req: Request) {
             type: "email",
           });
           if (!error) {
-            activeCodes.delete(normalizedEmail);
+            const codes = getActiveCodes();
+            delete codes[normalizedEmail];
+            saveActiveCodes(codes);
             return NextResponse.json({
               success: true,
               verified: true,

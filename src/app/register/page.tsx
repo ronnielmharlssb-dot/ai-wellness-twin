@@ -37,6 +37,7 @@ function RegisterContent() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [formError, setFormError] = useState("");
+  const [formNotice, setFormNotice] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeDemoInvites, setActiveDemoInvites] = useState<Invitation[]>([]);
 
@@ -63,6 +64,7 @@ function RegisterContent() {
   const handleDirectSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
+    setFormNotice("");
 
     if (!fullName.trim()) {
       setFormError("Please enter your full name.");
@@ -87,13 +89,17 @@ function RegisterContent() {
     setIsLoading(true);
 
     try {
-      const { user, error } = await signUpUser({
+      const { user, error, confirmationRequired } = await signUpUser({
         email: email.trim(),
         password,
         fullName: fullName.trim(),
         role: "employee",
       });
 
+      if (confirmationRequired) {
+        setFormNotice("Check your email to confirm your account, then sign in.");
+        return;
+      }
       if (error || !user) {
         setFormError(error || "Failed to create account.");
         return;
@@ -330,6 +336,7 @@ function RegisterContent() {
               </div>
             )}
 
+            {formNotice && <p role="status" className="rounded-xl bg-sky-50 p-3 text-xs text-sky-800 dark:bg-sky-950/40 dark:text-sky-300">{formNotice}</p>}
             <form onSubmit={handleDirectSignUp} className="space-y-4">
               
               {/* Full Name */}

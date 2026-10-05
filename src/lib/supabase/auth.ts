@@ -1,353 +1,123 @@
-import { createClient, isSupabaseConfigured } from "./client";
+import { createClient } from "./client";
+import { DEFAULT_ACCOUNTS, PRIMARY_USER_ACCOUNT, PRIMARY_HR_ACCOUNT, CALIBRATED_DEMO_ACCOUNT, isDemoModeEnabled, type AuthUser } from "./authTypes";
 
-export type AuthUser = {
-  id: string;
-  email: string;
-  fullName: string;
-  role: "employee" | "hr";
-};
-
+export { DEFAULT_ACCOUNTS, PRIMARY_USER_ACCOUNT, PRIMARY_HR_ACCOUNT, CALIBRATED_DEMO_ACCOUNT, isDemoModeEnabled };
+export type { AuthUser };
+export const LIVE_TESTER_ACCOUNT = PRIMARY_USER_ACCOUNT;
 const LOCAL_SESSION_KEY = "wellness-auth-user";
 const REGISTERED_USERS_KEY = "wellness-registered-users";
 
-export const PRIMARY_USER_ACCOUNT: AuthUser = {
-  id: "usr-ronnie",
-  email: "ronnie@company.com",
-  fullName: "Ronnie",
-  role: "employee",
-};
-
-export const PRIMARY_HR_ACCOUNT: AuthUser = {
-  id: "usr-hr-sarah",
-  email: "hr@company.com",
-  fullName: "Sarah Jenkins",
-  role: "hr",
-};
-
-export const CALIBRATED_DEMO_ACCOUNT: AuthUser = {
-  id: "usr-demo-calibrated",
-  email: "demo@company.com",
-  fullName: "Alex Rivera (Demo)",
-  role: "employee",
-};
-
-export const DEFAULT_ACCOUNTS: AuthUser[] = [
-  PRIMARY_USER_ACCOUNT,
-  PRIMARY_HR_ACCOUNT,
-  CALIBRATED_DEMO_ACCOUNT,
-];
-
-export function getRegisteredUsers(): AuthUser[] {
-  if (typeof window === "undefined") {
-    return DEFAULT_ACCOUNTS;
-  }
-
-  try {
-    const saved = localStorage.getItem(REGISTERED_USERS_KEY);
-    if (!saved) {
-      localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(DEFAULT_ACCOUNTS));
-      return DEFAULT_ACCOUNTS;
-    }
-    const parsed: AuthUser[] = JSON.parse(saved);
-    let list: AuthUser[] = Array.isArray(parsed) ? [...parsed] : [];
-
-    // Strictly enforce canonical roles for default accounts while preserving customized full name
-    for (const def of DEFAULT_ACCOUNTS) {
-      const idx = list.findIndex(
-        (u) => u.email.toLowerCase() === def.email.toLowerCase()
-      );
-      if (idx >= 0) {
-        list[idx] = {
-          ...list[idx],
-          role: def.role,
-          fullName: list[idx].fullName || def.fullName,
-        };
-      } else {
-        list.push(def);
-      }
-    }
-
-    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(list));
-    return list;
-  } catch {
-    return DEFAULT_ACCOUNTS;
-  }
+function isAuthUser(raw: unknown): raw is AuthUser {
+  if (!raw || typeof raw !== "object") return false;
+  const user = raw as AuthUser;
+  return typeof user.id === "string" && typeof user.email === "string" && typeof user.fullName === "string" &&
+    (user.role === "employee" || user.role === "hr");
 }
-
-export function saveRegisteredUser(user: AuthUser) {
-  if (typeof window === "undefined") return;
-
-  try {
-    const current = getRegisteredUsers();
-    const existingIndex = current.findIndex(
-      (u) => u.email.toLowerCase() === user.email.toLowerCase()
-    );
-
-    let updated: AuthUser[];
-    if (existingIndex >= 0) {
-      updated = current.map((u, i) => (i === existingIndex ? user : u));
-    } else {
-      updated = [...current, user];
-    }
-    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(updated));
-  } catch (err) {
-    console.error("Failed to save registered user:", err);
-  }
-}
-
-export function findRegisteredUser(email: string): AuthUser | null {
-  const users = getRegisteredUsers();
-  const normalized = email.trim().toLowerCase();
-  const found = users.find((u) => u.email.toLowerCase() === normalized);
-  if (!found) return null;
-
-  // Enforce canonical role if default account while preserving custom name
-  const canonical = DEFAULT_ACCOUNTS.find(
-    (def) => def.email.toLowerCase() === normalized
-  );
-  if (canonical) {
-    return { ...found, role: canonical.role, fullName: found.fullName || canonical.fullName };
-  }
-  return found;
-}
-
-export const LIVE_TESTER_ACCOUNT: AuthUser = PRIMARY_USER_ACCOUNT;
-
-export function loginAsRole(role: "employee" | "hr"): AuthUser {
-  const targetAccount = role === "hr" ? PRIMARY_HR_ACCOUNT : PRIMARY_USER_ACCOUNT;
-  if (typeof window !== "undefined") {
-    const existing = findRegisteredUser(targetAccount.email);
-    const finalAccount = existing ? { ...existing, role: targetAccount.role } : targetAccount;
-    saveRegisteredUser(finalAccount);
-    setLocalSessionUser(finalAccount);
-    window.dispatchEvent(new CustomEvent("wellness-auth-update", { detail: finalAccount }));
-    return finalAccount;
-  }
-  return targetAccount;
-}
-
-export function loginAsCalibratedDemo(): AuthUser {
-  if (typeof window !== "undefined") {
-    const existing = findRegisteredUser(CALIBRATED_DEMO_ACCOUNT.email);
-    const finalAccount = existing ? { ...existing, role: CALIBRATED_DEMO_ACCOUNT.role } : CALIBRATED_DEMO_ACCOUNT;
-    saveRegisteredUser(finalAccount);
-    setLocalSessionUser(finalAccount);
-    window.dispatchEvent(new CustomEvent("wellness-auth-update", { detail: finalAccount }));
-    return finalAccount;
-  }
-  return CALIBRATED_DEMO_ACCOUNT;
-}
-
-export function loginAsLiveTester(): AuthUser {
-  return loginAsRole("employee");
-}
-
+/** Local storage is a UI cache only. Server authentication owns access decisions. */
 export function getLocalSessionUser(): AuthUser | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
+  if (typeof window === "undefined") return null;
   try {
     const saved = localStorage.getItem(LOCAL_SESSION_KEY);
-    if (!saved) {
-      setLocalSessionUser(PRIMARY_USER_ACCOUNT);
-      return PRIMARY_USER_ACCOUNT;
-    }
-    const parsed: AuthUser = JSON.parse(saved);
-    // Auto-correct stale or corrupted roles for default accounts while preserving custom name
-    const canonical = DEFAULT_ACCOUNTS.find(
-      (a) => a.email.toLowerCase() === parsed.email.toLowerCase()
-    );
-    if (canonical && parsed.role !== canonical.role) {
-      const fixed: AuthUser = { ...parsed, role: canonical.role, fullName: parsed.fullName || canonical.fullName };
-      setLocalSessionUser(fixed);
-      return fixed;
-    }
-    return parsed;
-  } catch {
-    return PRIMARY_USER_ACCOUNT;
-  }
+    if (!saved) return null;
+    const parsed: unknown = JSON.parse(saved);
+    return isAuthUser(parsed) ? parsed : null;
+  } catch { return null; }
 }
-
 export function setLocalSessionUser(user: AuthUser | null) {
   if (typeof window === "undefined") return;
-
-  if (user) {
-    localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(user));
-  } else {
-    localStorage.removeItem(LOCAL_SESSION_KEY);
-  }
+  if (user) localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(user));
+  else localStorage.removeItem(LOCAL_SESSION_KEY);
+  window.dispatchEvent(new CustomEvent("wellness-auth-update", { detail: user }));
 }
+export function getRegisteredUsers(): AuthUser[] {
+  if (typeof window === "undefined") return DEFAULT_ACCOUNTS;
+  try {
+    const saved = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || "[]");
+    const users: AuthUser[] = Array.isArray(saved) ? saved.filter(isAuthUser) : [];
+    for (const account of DEFAULT_ACCOUNTS) {
+      if (!users.some((user) => user.id === account.id)) users.push(account);
+    }
+    return users;
+  } catch { return DEFAULT_ACCOUNTS; }
+}
+export function saveRegisteredUser(user: AuthUser) {
+  if (typeof window === "undefined") return;
+  const users = getRegisteredUsers().filter((existing) => existing.id !== user.id);
+  localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify([...users, user]));
+}
+export function findRegisteredUser(email: string): AuthUser | null {
+  return getRegisteredUsers().find((user) => user.email.toLowerCase() === email.trim().toLowerCase()) ?? null;
+}
+async function loginDemo(account: AuthUser): Promise<AuthUser> {
+  if (!isDemoModeEnabled()) throw new Error("Demo login is unavailable. Use your verified account.");
+  const response = await fetch("/api/auth/session", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: account.id }),
+  });
+  const data = await response.json();
+  if (!response.ok || !isAuthUser(data.user)) throw new Error(data.error || "Demo login failed.");
+  setLocalSessionUser(data.user);
+  return data.user;
+}
+export function loginAsRole(role: "employee" | "hr"): Promise<AuthUser> {
+  return loginDemo(role === "hr" ? PRIMARY_HR_ACCOUNT : PRIMARY_USER_ACCOUNT);
+}
+export function loginAsCalibratedDemo(): Promise<AuthUser> { return loginDemo(CALIBRATED_DEMO_ACCOUNT); }
+export function loginAsLiveTester(): Promise<AuthUser> { return loginAsRole("employee"); }
 
-export async function signUpUser({
-  email,
-  password,
-  fullName,
-  role,
-}: {
-  email: string;
-  password: string;
-  fullName: string;
-  role: "employee" | "hr";
+export async function refreshSessionUser(): Promise<AuthUser | null> {
+  const response = await fetch("/api/auth/session", { cache: "no-store" });
+  const data = await response.json();
+  const user = response.ok && isAuthUser(data.user) ? data.user : null;
+  setLocalSessionUser(user);
+  return user;
+}
+export async function signInUser({ email, password, selectedRole }: {
+  email: string; password?: string; selectedRole?: "employee" | "hr";
 }): Promise<{ user: AuthUser | null; error: string | null }> {
-  const normalizedEmail = email.trim().toLowerCase();
-
-  // Verify if account already exists
-  const existing = findRegisteredUser(normalizedEmail);
-  if (existing) {
-    return {
-      user: null,
-      error: `An account with "${normalizedEmail}" already exists. Please sign in instead.`,
-    };
-  }
-
-  const newUser: AuthUser = {
-    id: `usr-${crypto.randomUUID().slice(0, 8)}`,
-    email: normalizedEmail,
-    fullName: fullName.trim() || "Team Member",
-    role,
-  };
-
-  saveRegisteredUser(newUser);
-  setLocalSessionUser(newUser);
-
-  if (isSupabaseConfigured()) {
-    const supabase = createClient();
-    if (supabase) {
-      try {
-        await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-              role,
-            },
-          },
-        });
-      } catch {
-        // Fall back gracefully to local verified account
-      }
+  const supabase = createClient();
+  if (!supabase) return { user: null, error: "Account authentication is not configured. Use an explicit demo account for the local preview." };
+  if (!password) return { user: null, error: "A password is required." };
+  try {
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+    if (error) return { user: null, error: error.message };
+    const user = await refreshSessionUser();
+    if (!user) return { user: null, error: "The server could not verify your session. Please sign in again." };
+    if (selectedRole && selectedRole !== user.role) {
+      await signOutUser();
+      return { user: null, error: "This account does not have the requested role." };
     }
-  }
-
-  return { user: newUser, error: null };
+    return { user, error: null };
+  } catch { return { user: null, error: "Authentication is unavailable. Please retry." }; }
 }
-
-export async function signInUser({
-  email,
-  password,
-  selectedRole,
-}: {
-  email: string;
-  password?: string;
-  selectedRole?: "employee" | "hr";
-}): Promise<{ user: AuthUser | null; error: string | null }> {
-  const normalizedEmail = email.trim().toLowerCase();
-
-  // Verify account existence
-  const existingUser = findRegisteredUser(normalizedEmail);
-  if (!existingUser) {
-    return {
-      user: null,
-      error: `No registered account found for "${normalizedEmail}". Please create an account or verify your email.`,
-    };
-  }
-
-  if (isSupabaseConfigured() && password) {
-    const supabase = createClient();
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: normalizedEmail,
-          password,
-        });
-        if (!error && data.user) {
-          const authUser: AuthUser = {
-            id: data.user.id,
-            email: data.user.email ?? normalizedEmail,
-            fullName: (data.user.user_metadata?.full_name as string) ?? existingUser.fullName,
-            role: (data.user.user_metadata?.role as AuthUser["role"]) ?? existingUser.role,
-          };
-          saveRegisteredUser(authUser);
-          setLocalSessionUser(authUser);
-          return { user: authUser, error: null };
-        }
-      } catch {
-        // Fall through to verified registered user
-      }
-    }
-  }
-
-  // Set session with verified registered account
-  const activeUser = selectedRole ? { ...existingUser, role: selectedRole } : existingUser;
-  setLocalSessionUser(activeUser);
-  return { user: activeUser, error: null };
+export async function signUpUser({ email, password, fullName, role }: {
+  email: string; password: string; fullName: string; role: "employee" | "hr";
+}): Promise<{ user: AuthUser | null; error: string | null; confirmationRequired?: boolean }> {
+  const supabase = createClient();
+  if (!supabase) return { user: null, error: "Account registration requires the configured authentication service." };
+  if (role !== "employee") return { user: null, error: "HR access requires administrator approval." };
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(), password,
+      options: { data: { full_name: fullName.trim() }, emailRedirectTo: `${window.location.origin}/api/auth/callback` },
+    });
+    if (error) return { user: null, error: error.message };
+    if (!data.session) return { user: null, error: null, confirmationRequired: true };
+    const user = await refreshSessionUser();
+    return { user, error: user ? null : "Account created, but session verification failed. Please sign in." };
+  } catch { return { user: null, error: "Registration is unavailable. Please retry." }; }
 }
-
-export async function signInWithGoogle(
-  customEmail?: string,
-  options?: { isSignUp?: boolean; role?: "employee" | "hr" }
-): Promise<{ user: AuthUser | null; error: string | null }> {
-  const email = (customEmail?.trim() || "alex.morgan@gmail.com").toLowerCase();
-  const isSignUp = options?.isSignUp ?? false;
-  const role = options?.role ?? "employee";
-
-  const existingUser = findRegisteredUser(email);
-
-  // 1. Sign-In on /login: verify if account exists
-  if (!isSignUp) {
-    if (!existingUser) {
-      return {
-        user: null,
-        error: `Account "${email}" not found. Please register first or create an account.`,
-      };
-    }
-
-    setLocalSessionUser(existingUser);
-    return { user: existingUser, error: null };
-  }
-
-  // 2. Sign-Up on /register: verify if account already exists
-  if (isSignUp) {
-    if (existingUser) {
-      return {
-        user: null,
-        error: `An account with Google email "${email}" already exists. Please sign in instead.`,
-      };
-    }
-
-    const namePrefix = email.split("@")[0].replace(/[._-]/g, " ");
-    const fullName = namePrefix
-      .split(" ")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-
-    const newGoogleUser: AuthUser = {
-      id: `usr-${crypto.randomUUID().slice(0, 8)}`,
-      email,
-      fullName: fullName || "Google User",
-      role,
-    };
-
-    saveRegisteredUser(newGoogleUser);
-    setLocalSessionUser(newGoogleUser);
-    return { user: newGoogleUser, error: null };
-  }
-
-  return { user: null, error: "Authentication failed." };
+export async function signInWithGoogle(customEmail?: string, _options?: { isSignUp?: boolean; role?: "employee" | "hr" }): Promise<{ user: AuthUser | null; error: string | null }> {
+  if (_options?.isSignUp && _options.role === "hr") return { user: null, error: "HR access requires administrator approval." };
+  const supabase = createClient();
+  if (!supabase) return { user: null, error: "Google sign-in requires the configured authentication service." };
+  const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: {
+    redirectTo: `${window.location.origin}/api/auth/callback`,
+    queryParams: customEmail ? { login_hint: customEmail } : undefined,
+  } });
+  return { user: null, error: error?.message ?? null };
 }
-
 export async function signOutUser() {
+  const response = await fetch("/api/auth/session", { method: "DELETE" });
+  if (!response.ok) throw new Error("Sign-out failed. Please retry.");
   setLocalSessionUser(null);
-  if (isSupabaseConfigured()) {
-    const supabase = createClient();
-    if (supabase) {
-      try {
-        await supabase.auth.signOut();
-      } catch {
-        // Safe sign out
-      }
-    }
-  }
 }

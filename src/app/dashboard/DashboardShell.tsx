@@ -1,0 +1,240 @@
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import DashboardNav from "./DashboardNav";
+import MobileNav from "./MobileNav";
+import { UserHeaderButton } from "@/components/ui/user-header-button";
+import { LiveTelemetryIndicator } from "@/components/ui/live-telemetry-indicator";
+import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
+import { Settings, ShieldCheck, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { setLocalSessionUser, type AuthUser } from "@/lib/supabase/auth";
+import { clearEmployeeMetrics, replaceCloudEmployeeMetrics } from "@/lib/wellbeing/employeeMetrics";
+import { decodeCloudMetrics } from "@/lib/wellbeing/observationCodec";
+import { sourceImportQueue } from "@/lib/integrations/sourceImportQueue";
+import { SourceImportStatus } from "@/components/ui/source-import-status";
+
+const SIDEBAR_COLLAPSED_KEY = "wellness-sidebar-collapsed";
+
+export default function DashboardLayout({
+  children,
+  authenticatedUser,
+}: {
+  children: ReactNode;
+  authenticatedUser: AuthUser;
+}) {
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
+  const [historyAttempt, setHistoryAttempt] = useState(0);
+  useEffect(() => {
+    if (authenticatedUser.role !== "employee" || authenticatedUser.source !== "supabase") return;
+    // History may be unavailable while an import is waiting for retry.
+    // The server authenticates every upload; the queue survives dashboard unmounts.
+    setLocalSessionUser(authenticatedUser);
+    sourceImportQueue.start(authenticatedUser.id);
+    return () => sourceImportQueue.stop();
+  }, [authenticatedUser]);
+
+  useEffect(() => {
+    const user = authenticatedUser;
+    setLocalSessionUser(user);
+    if (!user) {
+      setIsAuthorized(false);
+      router.replace("/login");
+      return;
+    }
+    if (user.role === "hr") {
+      setIsAuthorized(false);
+      router.replace("/hr");
+      return;
+    }
+    let cancelled = false;
+    const controller = new AbortController();
+    if (user.source === "supabase") {
+      setIsAuthorized(null);
+      setHistoryError(false);
+      void (async () => {
+        try {
+          const response = await fetch("/api/telemetry/history", {
+            cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12_000)]),
+          });
+          if (!response.ok) throw new Error("Private history unavailable.");
+          const data = await response.json();
+          const metrics = decodeCloudMetrics(data.dailyMetrics, user.id);
+          if (!Number.isSafeInteger(data.stateRevision) || data.stateRevision < 0 ||
+              metrics.some((metric) => metric.cloudRevision! > data.stateRevision)) throw new Error("Invalid private history revision.");
+          if (cancelled) return;
+          replaceCloudEmployeeMetrics(user.id, metrics, data.stateRevision);
+          setIsAuthorized(true);
+        } catch {
+          if (cancelled) return;
+          // Do not assess legacy estimates or cached rows when authoritative history failed.
+          try { clearEmployeeMetrics(user.id); } catch { /* The error screen still gates assessment. */ }
+          setHistoryError(true);
+          setIsAuthorized(false);
+        }
+      })();
+    } else setIsAuthorized(true);
+
+    // Load saved collapsed state
+    try {
+      const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+      if (saved !== null) {
+        setIsCollapsed(saved === "true");
+      }
+    } catch {
+      // ignore
+    }
+    return () => { cancelled = true; controller.abort(); };
+  }, [router, authenticatedUser, historyAttempt]);
+
+  const toggleSidebar = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f8fa] dark:bg-[#20201e]">
+        <div className="flex flex-col items-center gap-3">
+          <WellnessTwinLogo size={40} />
+          <p className="text-xs font-semibold text-slate-400">{historyError ? "Your private cloud history is unavailable. Your queued observations are retained." : "Loading your wellness twin..."}</p>
+          {historyError && <button type="button" onClick={() => setHistoryAttempt((attempt) => attempt + 1)} className="rounded-lg bg-sky-700 px-4 py-2 text-sm text-white">Retry loading history</button>}
+          {authenticatedUser.source === "supabase" && <SourceImportStatus key={authenticatedUser.id} employeeId={authenticatedUser.id} />}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#f7f8fa] dark:bg-[#20201e] transition-colors duration-300 p-3 sm:p-4 md:p-5">
+      <div className="flex gap-4 md:gap-5 min-h-[calc(100vh-2.5rem)]">
+        {/* Indented Floating Desktop Sidebar */}
+        <aside
+          className={`hidden shrink-0 rounded-3xl border border-slate-200/90 bg-white dark:border-[#383734] dark:bg-[#2c2b28] md:flex md:flex-col sticky top-4 md:top-5 h-[calc(100vh-2.5rem)] overflow-y-auto shadow-sm transition-all duration-300 ease-in-out ${
+            isCollapsed ? "w-[72px]" : "w-64"
+          }`}
+        >
+          <div className="flex h-full flex-col justify-between p-4">
+            <div>
+              {/* Brand & Collapse Toggle */}
+              <div className="mb-6 flex items-center justify-between">
+                <div className={`flex items-center gap-3 overflow-hidden ${isCollapsed ? "justify-center w-full" : ""}`}>
+                  <Link href="/dashboard" className="shrink-0" title="Wellness Twin Dashboard">
+                    <WellnessTwinLogo size={34} />
+                  </Link>
+
+                  {!isCollapsed && (
+                    <div className="min-w-0 transition-opacity duration-200">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                        Wellness Twin
+                      </p>
+
+                      <p className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-[#9a9893] truncate">
+                        <ShieldCheck className="h-3 w-3 text-emerald-500 shrink-0" />
+                        Private & Anonymized
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {!isCollapsed && (
+                  <button
+                    type="button"
+                    onClick={toggleSidebar}
+                    title="Collapse sidebar"
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#383734] dark:hover:text-slate-200 transition-colors shrink-0 cursor-pointer"
+                  >
+                    <PanelLeftClose className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Collapsed Expand Trigger Button */}
+              {isCollapsed && (
+                <div className="mb-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={toggleSidebar}
+                    title="Expand sidebar"
+                    className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#383734] dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    <PanelLeftOpen className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Navigation Items */}
+              <DashboardNav collapsed={isCollapsed} />
+            </div>
+
+            {/* Bottom Settings Link */}
+            <div className="mt-auto border-t border-slate-100 pt-3 dark:border-[#383734]">
+              <Link
+                href="/settings"
+                title={isCollapsed ? "Settings" : undefined}
+                className={`flex shrink-0 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
+                  isCollapsed ? "h-10 w-10 justify-center mx-auto" : ""
+                } text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80 dark:hover:text-white`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-slate-400 dark:text-slate-500">
+                    <Settings className="h-4 w-4 shrink-0" />
+                  </span>
+                  {!isCollapsed && <span className="whitespace-nowrap">Settings</span>}
+                </div>
+              </Link>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content Area */}
+        <div className="min-w-0 flex-1 flex flex-col">
+          <header className="relative flex h-16 items-center justify-between rounded-2xl border border-slate-200/90 bg-white px-4 sm:px-6 dark:border-[#383734] dark:bg-[#2c2b28] shadow-sm mb-4 md:mb-5 transition-colors duration-300">
+            <div className="flex items-center gap-3">
+              <MobileNav />
+
+              {/* Desktop Quick Toggle Icon in Top Header */}
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                className="hidden md:flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-[#383734] dark:hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                {isCollapsed ? (
+                  <PanelLeftOpen className="h-4 w-4 text-sky-600 dark:text-[#60cdff]" />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" />
+                )}
+              </button>
+
+              <p className="text-sm font-medium text-slate-900 dark:text-white">
+                Personal Wellbeing Dashboard
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <LiveTelemetryIndicator />
+              <UserHeaderButton defaultRole="employee" />
+            </div>
+          </header>
+
+          <main className="flex-1">
+            {authenticatedUser.source === "supabase" && <SourceImportStatus key={authenticatedUser.id} employeeId={authenticatedUser.id} />}
+            {children}
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}

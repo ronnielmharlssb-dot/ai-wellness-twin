@@ -32,10 +32,12 @@ import { ScoreGauge } from "@/components/ui/score-gauge";
 import { BaselineCalibrationSuite } from "@/components/ui/baseline-calibration-suite";
 import { ToolActivityBreakdown } from "@/components/ui/tool-activity-breakdown";
 import { LensCard } from "@/components/ui/lens-card";
+import { AssessmentEvidence } from "@/components/ui/assessment-evidence";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [assessment, setAssessment] = useState<EmployeeAssessment | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const loadUserData = (currentUserId: string) => {
     const metrics = getMetricsForEmployee(currentUserId);
@@ -44,13 +46,26 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    const sessionUser = getLocalSessionUser();
-    setUser(sessionUser);
-    const employeeId = sessionUser?.id || "usr-ronnie";
-    loadUserData(employeeId);
+    setMounted(true);
+    const handleUpdate = () => {
+      const sessionUser = getLocalSessionUser();
+      setUser(sessionUser?.role === "employee" ? sessionUser : null);
+      loadUserData(sessionUser?.role === "employee" ? sessionUser.id : "");
+    };
+    handleUpdate();
+    const timer = window.setInterval(handleUpdate, 60000);
+    window.addEventListener("wellness-telemetry-update", handleUpdate);
+    window.addEventListener("wellness-auth-update", handleUpdate);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("wellness-telemetry-update", handleUpdate);
+      window.removeEventListener("wellness-auth-update", handleUpdate);
+    };
   }, []);
 
-  const isBuilding = assessment?.status === "building";
+  if (!mounted) return null;
+
+  const isBuilding = !assessment || assessment.status === "building";
 
   // Dynamic time greeting and formatted date
   const hour = new Date().getHours();
@@ -69,37 +84,37 @@ export default function DashboardPage() {
       case "afterHoursActivity":
         return {
           title: "Peak Window",
-          detail: "8:15 PM – 9:00 PM evening workstation session",
-          source: "VS Code & Slack active signals",
+          detail: "Recorded activity outside your configured work schedule",
+          source: "Observed activity and calendar intervals",
           footer: "Metadata timestamps only 🔒",
         };
       case "meetingLoad":
         return {
           title: "Calendar Density",
-          detail: isIncrease ? "Multiple back-to-back blocks detected" : "Light schedule with open focus hours",
-          source: "Google Calendar sync",
+          detail: isIncrease ? "Scheduled meeting duration increased against your baseline" : "Scheduled meeting duration decreased against your baseline",
+          source: "Imported calendar blocks",
           footer: "Meeting titles excluded 🔒",
         };
       case "breakFrequency":
         return {
           title: "Rest Rhythm",
-          detail: isIncrease ? "Frequent healthy pauses taken today" : "Longest focus stretch: 3.8 hrs without pause",
-          source: "Workstation gap detector",
+          detail: isIncrease ? "More observed pauses than your baseline" : "Fewer observed pauses than your baseline",
+          source: "Browser activity gap detector",
           footer: "Goal: 5m pause / 2h",
         };
       case "workingHours":
       default:
         return {
           title: "Session Rhythm",
-          detail: "Active workstation timeline across day",
-          source: "Unified Google identity sync",
+          detail: "Observed focus intervals across the day",
+          source: "Measured activity collectors",
           footer: "Private to your twin 🔒",
         };
     }
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* Clean Greeting Header */}
       <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -125,17 +140,18 @@ export default function DashboardPage() {
         </Link>
       </section>
 
+      <AssessmentEvidence assessment={assessment} />
       {/* Baseline Calibration in Progress Suite */}
       {isBuilding ? (
         <div className="space-y-6">
           <BaselineCalibrationSuite
-            employeeId={user?.id || "usr-ronnie"}
+            employeeId={user?.id ?? ""}
             daysCollected={assessment?.daysCollected ?? 0}
             requiredDays={assessment?.requiredDays ?? 28}
-            onMetricsUpdated={() => loadUserData(user?.id || "usr-ronnie")}
+            onMetricsUpdated={() => loadUserData(user?.id ?? "")}
           />
 
-          <ToolActivityBreakdown employeeId={user?.id || "usr-ronnie"} />
+          <ToolActivityBreakdown employeeId={user?.id ?? ""} />
         </div>
       ) : (
         <>
@@ -145,7 +161,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2 text-amber-900 dark:text-amber-300 font-semibold">
                 <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
                 <span>
-                  <strong>Demo Mode:</strong> 28-Day Baseline is fully established with active signals & behavioral patterns.
+                  <strong>Demo Mode:</strong> Synthetic baseline and comparison observations illustrate the pattern view.
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -174,7 +190,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <ToolActivityBreakdown employeeId={user?.id || "usr-ronnie"} />
+          <ToolActivityBreakdown employeeId={user?.id ?? ""} />
 
           {/* Unified Primary Hero Reflection Card */}
           <Card className="p-6 sm:p-7">
@@ -187,13 +203,15 @@ export default function DashboardPage() {
                     variant={
                       assessment?.status === "stable"
                         ? "positive"
-                        : assessment?.status === "watch"
+                        : assessment?.status === "watch" || assessment?.status === "partial"
                         ? "neutral"
                         : "warning"
                     }
                   >
                     {assessment?.status === "stable"
-                      ? "Steady & Balanced"
+                      ? "Recorded Patterns Steady"
+                      : assessment?.status === "partial"
+                      ? "Partial Observations"
                       : assessment?.status === "watch"
                       ? "Noticing Changes"
                       : "Gentle Pacing Check"}
@@ -207,10 +225,10 @@ export default function DashboardPage() {
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
                     {assessment?.changes && assessment.changes.length > 0
                       ? "A few recent work rhythms differed from your typical pacing."
-                      : "Your work habits are steady and match your natural pace."}
+                      : assessment?.status === "partial" ? "Only the available recorded metrics can be compared." : "Recorded patterns stayed close to your baseline."}
                   </h2>
                   <p className="mt-1.5 text-xs leading-5 text-slate-500 dark:text-[#a6a6a6]">
-                    Your twin reflects shifts in focus hours, evening communication, meetings, and restorative micro-pauses to help you maintain healthy boundaries.
+                    Your twin compares recorded activity, scheduled meetings and observed breaks with your own history. Capture coverage can change between days.
                   </p>
                 </div>
 
@@ -244,7 +262,7 @@ export default function DashboardPage() {
                   Observed Patterns
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-[#a6a6a6]">
-                  Shifts of ≥ 20% compared with your usual 28-day baseline.
+                  Recorded shifts of ≥ 20%, or new activity from a zero baseline.
                 </p>
               </div>
             </div>
@@ -252,7 +270,7 @@ export default function DashboardPage() {
             {assessment?.changes && assessment.changes.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {assessment.changes.map((change) => {
-                  const isIncrease = change.percentageChange > 0;
+                  const isIncrease = change.currentValue > change.baselineValue;
                   const inspection = getMetricInspectionDetails(change.metric, isIncrease);
 
                   return (
