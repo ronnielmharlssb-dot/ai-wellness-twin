@@ -24,15 +24,20 @@ async function main() {
       catch { await new Promise((resolve) => setTimeout(resolve, 500)); }
     }
     assert.ok(ready && !exited, "Temporary production server did not start: " + diagnostics);
-    for (const [endpoint, status] of [["/login", 200], ["/forgot-password", 200], ["/reset-password", 200], ["/dashboard", 307], ["/hr", 307], ["/settings", 307],
+    for (const [endpoint, status] of [["/", 200], ["/demo", 200], ["/register-company", 200], ["/login", 200], ["/forgot-password", 200], ["/reset-password", 200], ["/dashboard", 307], ["/hr", 307], ["/settings", 307],
       ["/api/auth/session", 401], ["/api/telemetry/live-status", 401], ["/api/telemetry/history", 401], ["/api/hr/workspace", 401],
-      ["/api/organizations/aggregate-consent", 401], ["/api/integrations/authorize?provider=github", 401]]) {
+      ["/api/organizations/aggregate-consent", 401], ["/api/organizations/setup-requests", 401], ["/api/integrations/authorize?provider=github", 401]]) {
       const response = await fetch(base + endpoint, { redirect: "manual", signal: AbortSignal.timeout(10000) });
       assert.equal(response.status, status, endpoint);
       if (status === 307) assert.equal(new URL(response.headers.get("location"), base).pathname, "/login");
-      await response.text();
+      const html = await response.text();
+      if (endpoint === "/demo") {
+        assert.match(html, /Interactive sample demo/);
+        assert.match(html, /Fictional data/);
+        assert.match(html, /Sample scenario/);
+      }
     }
-    for (const endpoint of ["/api/telemetry/heartbeat", "/api/telemetry/calendar-webhook", "/api/telemetry/source-snapshots", "/api/organizations/aggregate-consent", "/api/integrations/verify-owner"]) {
+    for (const endpoint of ["/api/telemetry/heartbeat", "/api/telemetry/calendar-webhook", "/api/telemetry/source-snapshots", "/api/organizations/aggregate-consent", "/api/organizations/setup-requests", "/api/organizations/verify-kyb", "/api/integrations/verify-owner"]) {
       const response = await fetch(base + endpoint, { method: "POST", headers: { Origin: base, "Content-Type": "application/json" }, body: "{}" });
       assert.equal(response.status, 401, endpoint);
       const crossOrigin = await fetch(base + endpoint, { method: "POST", headers: { Origin: "https://other.example" }, body: "{}" });

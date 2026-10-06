@@ -148,6 +148,7 @@ export default function LoginPage() {
           <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-[#a6a6a6]">
             Understand your work patterns. Build healthier habits.
           </p>
+          <Link href="/demo" className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-5 py-2.5 text-xs font-semibold text-sky-800 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200">Explore sample demo · No account needed</Link>
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm dark:border-[#383734] dark:bg-[#2c2b28] space-y-4">
@@ -311,7 +312,7 @@ export default function LoginPage() {
               href="/register-company"
               className="font-semibold text-sky-600 hover:underline dark:text-[#60cdff]"
             >
-              Register Your Company →
+              Request Organization Setup →
             </Link>
           </p>
         </div>

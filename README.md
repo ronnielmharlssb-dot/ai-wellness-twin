@@ -5,6 +5,11 @@ own 28-day baseline. The intended HR experience exposes eligible group aggregate
 See [engineering status](docs/ENGINEERING_STATUS.md) for implemented capabilities and
 requirements still needed before production use.
 
+For the presentation, open [the public interactive demo](https://ai-wellness-twin.vercel.app/demo).
+It needs no account and uses clearly labeled fictional data, with employee scenarios,
+baseline evidence, HR privacy suppression and a sample data walkthrough. It does not
+write real observations or bypass sign-in. See the [presentation runbook](docs/DEMO_RUNBOOK.md).
+
 Personal comparisons use seven completed UTC dates and a separate baseline of the
 most recent 28 earlier observed dates per metric, within the past 90 days. Missing
 measurements remain unknown; partial evidence can supply individual comparisons,
@@ -91,13 +96,31 @@ For a new database, apply `src/lib/supabase/schema.sql`, then
 `src/lib/supabase/migrations/20261004_tenant_privacy.sql`, followed by
 `src/lib/supabase/migrations/20261005_cloud_ingestion.sql`, then
 `src/lib/supabase/migrations/20261005_source_observation_preferences.sql`, then
-`src/lib/supabase/migrations/20261005_hr_baseline_evidence.sql` through an
+`src/lib/supabase/migrations/20261005_hr_baseline_evidence.sql`, then
+`src/lib/supabase/migrations/20261006_organization_setup_requests.sql` through an
 administrative database connection. For an existing installation, apply the outstanding
 migrations in that order. The source-preferences migration upgrades existing Calendar
 import RPCs to support unknown after-hours observations. The HR evidence migration
 requires valid, recent baseline measurements even when legacy rows predate constraints.
 The migrations have been tested locally with PostgreSQL via PGlite; they are not
 automatically applied to your Supabase project.
+
+`/register-company` now requests administrator review from a signed-in, verified
+personal account. The database derives the applicant and confirmed contact email,
+stores one pending request per account, and exposes only that applicant's history.
+Identical retries return the existing committed receipt. A request never verifies
+a business, grants HR access, changes consent or creates a membership. Legacy
+browser organization registries are not adopted. Automatic format-based KYB and
+browser domain PIN verification have been retired.
+
+An administrator must independently verify the business and representative's
+authority. After separately provisioning a legitimate organization, the administrator
+may set the request's `status` to `approved`, `reviewed_at` to the review time and
+`organization_id` to that organization's ID, or decline it with a review time and no
+organization ID. Role and membership assignments remain separate privileged actions.
+Browser roles cannot edit or approve requests. The submission function uses an empty
+search path and explicit execute grants following the
+[Supabase function security guidance](https://supabase.com/docs/guides/database/functions).
 
 Provision organizations, active memberships and group cohorts as a trusted
 administrator. HR access requires both the server-managed auth role and an active
@@ -228,7 +251,7 @@ boundary or a substitute for cloud retention and backup policies.
 Development demo telemetry uses `.data/telemetry-v1.json` on one host. That ignored
 directory also holds development signing keys. `WELLNESS_TELEMETRY_STORE_PATH` can
 override the demo file path; cloud ingestion does not require a local volume.
-Integration labels, settings, organization demonstrations and invitations still
+Integration labels, settings and local HR demonstrations and invitations still
 include browser-local state. Those registries are not organization authorization.
 Cloud migrations, backups, derived-history retention/deletion and live provider
 deployment checks remain operational requirements; none are automatically deployed.

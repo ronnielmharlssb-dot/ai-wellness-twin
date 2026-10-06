@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
-import { Building2, ArrowRight, ShieldCheck, Activity } from "lucide-react";
+import { ArrowRight, ShieldCheck, Activity } from "lucide-react";
 
 export default function Home() {
   return (
@@ -35,19 +35,13 @@ export default function Home() {
 
           <div className="mt-8 flex items-center justify-center gap-2 text-[11px] font-semibold text-slate-400 dark:text-[#888884]">
             <ShieldCheck className="h-4 w-4 text-emerald-500" />
-            <span>100% Privacy Guaranteed. Zero Surveillance.</span>
+            <span>Personal insights. Consented group trends.</span>
           </div>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/register-company"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-[#60cdff] px-8 py-3.5 text-xs font-bold text-black transition-all hover:bg-[#4cc2ff] hover:scale-105 hover:shadow-lg hover:shadow-[#60cdff]/20 active:scale-95"
-            >
-              <Building2 className="h-4 w-4" />
-              <span>Register Your Company</span>
-              <ArrowRight className="h-4 w-4" />
+            <Link href="/demo" className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-2xl bg-[#60cdff] px-8 py-3.5 text-xs font-bold text-black transition hover:bg-[#4cc2ff]">
+              Explore Demo <ArrowRight className="h-4 w-4" />
             </Link>
-
             <Link
               href="/login"
               className="w-full sm:w-auto rounded-2xl bg-slate-900 px-8 py-3.5 text-xs font-bold text-white transition-all hover:bg-slate-800 hover:scale-105 hover:shadow-lg active:scale-95 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
@@ -57,11 +51,13 @@ export default function Home() {
           </div>
 
           <p className="mt-10 text-xs text-slate-400 dark:text-[#888884] animate-in fade-in delay-300 duration-1000">
-            Have an employee invite?{" "}
+            Ready for your own account?{" "}
             <Link href="/register" className="font-semibold text-sky-600 hover:underline hover:text-sky-700 dark:text-[#60cdff] dark:hover:text-[#4cc2ff] transition-colors">
-              Accept Single-Use Invite
+              Create Personal Account
             </Link>
           </p>
+          <p className="mt-3 text-xs text-slate-400 dark:text-[#888884]">The interactive demo uses fictional sample data. No account required.</p>
+          <Link href="/register-company" className="mt-4 inline-block text-xs font-semibold text-sky-600 hover:underline dark:text-sky-300">Request Organization Setup</Link>
         </div>
       </div>
     </main>

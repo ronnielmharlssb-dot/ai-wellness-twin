@@ -64,7 +64,7 @@ async function checkDeployment({ appOrigin, supabaseUrl, supabaseKey, timeoutMs 
     catch (error) { record(name, false, networkFailure(error)); }
   };
   const pages = new Map();
-  await Promise.all(["/login", "/register"].map(path => probe("page:" + path, async () => {
+  await Promise.all(["/login", "/register", "/demo"].map(path => probe("page:" + path, async () => {
     const response = await request(app + path);
     const html = await readBody(response, 2 * 1024 * 1024);
     if (response.status !== 200 || !response.headers.get("content-type")?.includes("text/html") || !/Wellness Twin/i.test(html)) {
@@ -124,7 +124,7 @@ async function checkDeployment({ appOrigin, supabaseUrl, supabaseKey, timeoutMs 
     }
     return "Unauthenticated page access redirects to login.";
   })));
-  await Promise.all(["/api/auth/session", "/api/telemetry/history", "/api/telemetry/live-status", "/api/hr/workspace", "/api/organizations/aggregate-consent"]
+  await Promise.all(["/api/auth/session", "/api/telemetry/history", "/api/telemetry/live-status", "/api/hr/workspace", "/api/organizations/aggregate-consent", "/api/organizations/setup-requests"]
     .map(path => probe("access:" + path, async () => {
       const response = await request(app + path);
       await readBody(response, 65536);

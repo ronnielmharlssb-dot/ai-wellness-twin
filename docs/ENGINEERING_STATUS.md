@@ -6,6 +6,16 @@ with HR access limited to anonymized group trends.
 
 ## Implemented in the current worktree
 
+- A public `/demo` route requires no account and presents deterministic fictional
+  employee scenarios through the existing assessment logic. HR averages and the
+  data walkthrough are explicitly illustrative. Controls change only the page's
+  memory; the demo neither starts collectors nor reads/writes real account data.
+- Organization setup now uses authenticated, database-backed pending requests,
+  private applicant history and idempotent receipts. Confirmed contact identity is
+  derived by the database. Requests grant no roles, membership or verification.
+  Browser company registration/domain PIN authority and format-based KYB have been
+  removed; administrative business review is a separate operational requirement.
+
 - Explicit server-verified authentication for employee, HR and settings pages.
 - Supabase password and registration errors no longer fall back to local login.
 - Roles come from server-managed `app_metadata`, never user-editable metadata.
@@ -127,15 +137,13 @@ This is a local application under development, not a verified production deploym
 
 ### Deployed authentication check on 2026-10-06
 
-The registration page on `https://ai-wellness-twin.vercel.app` is reachable. Its
-served JavaScript contains the same public Supabase URL and anonymous key as the
-local configuration. That configured project's hostname does not resolve: the
-authentication health request fails with `ENOTFOUND`, and an independent public DNS
-lookup returns status 3 (NXDOMAIN), with no answers. Account creation was not confirmed.
-Restore that Supabase project or configure an active project's public URL and key
-in Vercel and redeploy before claiming registration or sign-in works. This check
-does not establish whether the project was paused, deleted or misconfigured; that
-requires access to its Supabase dashboard.
+The owner restored the paused Supabase project. The most recent live public check
+passed authentication health, enabled email registration and anonymous access guards.
+The requested email is already registered; the earlier password attempt was rejected.
+The authorized recovery request failed with HTTP 500, so no recovery email was
+confirmed sent. Google OAuth reached Google's sign-in page, but an authenticated
+dashboard and live ingestion remain unverified. The separate public sample demo
+does not depend on this account recovery.
 
 1. Finish provider ingestion: token retention and refresh, scheduled incremental
    fetches and authenticated native
@@ -145,9 +153,9 @@ requires access to its Supabase dashboard.
    backups, derived-history retention and deletion. Raw cloud receipts and interval
    ledgers are bounded to the replay window. Local demo files still need abandoned-lock
    recovery if that optional development backend is used persistently.
-3. Finish real organization membership, invitations and company verification. Current
-   browser registries and verification demonstrations are not authoritative membership
-   or domain ownership evidence.
+3. Apply the organization setup request migration and implement the operational
+   administrator review, invitations and verified membership process. Pending requests
+   are implemented; they are not membership or domain ownership evidence.
 4. Exercise the implemented cloud ingestion and private history path on the real
    database, including concurrent uploads, reloads and failures. Browser storage remains
    a display cache, not a privacy or tenancy boundary. Workstation and source-import
@@ -298,3 +306,23 @@ journey, native webhook delivery or a production HR privacy boundary.
 - Live application of database migrations and authenticated ingestion remain
   unverified. The email-delivery failure and account-owner Google sign-in handoff
   remain unresolved external checks; this work does not claim a successful login.
+
+### Presentation readiness follow-up
+
+- All 184 regression tests passed, including actual PostgreSQL request permissions,
+  private applicant history, unconfirmed-account denial, request replay conflicts,
+  direct approval denial and administrative review without membership/role grants.
+  API/client tests reject missing or mismatched acknowledgements and sanitize failures.
+- Public demo regressions exercise the real personal assessment function with
+  deterministic fictional records. Separate baseline/recent windows, unfinished
+  calibration and missing metrics retain their evidence requirements. The HR sample
+  illustration suppresses all averages below three contributors.
+- Lint, TypeScript, the production build and HTTP smoke checks passed. The smoke
+  harness checks public demo access while real dashboards and private endpoints
+  continue to reject anonymous users. Cross-origin setup/KYB calls are rejected.
+- A browser rehearsal of the local production build verified all four sample
+  scenarios, HR suppression and recovery, and all three data-walkthrough steps.
+  This verifies sample UI behavior, not live provider ingestion.
+- The public demo requires no database migration. Real organization requests still
+  require the new migration to be applied through an administrator connection.
+  Existing deployment requirements for real users remain in force.

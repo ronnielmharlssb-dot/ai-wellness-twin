@@ -13,7 +13,7 @@ async function fixture(t, changes = {}) {
     requests.push({ method: req.method, path: req.url, key: req.headers.apikey });
     const path = req.url.split("?")[0];
     if (changes.respond?.(path, req, res)) return;
-    if (["/login", "/register"].includes(path)) {
+    if (["/login", "/register", "/demo"].includes(path)) {
       res.setHeader("Content-Type", "text/html");
       res.end(`<main>AI WELLNESS TWIN</main><script src="/_next/static/main.js"></script>`);
     } else if (path === "/_next/static/main.js") {
