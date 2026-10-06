@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { RecoveryRedirect } from "@/components/auth/recovery-redirect";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -70,6 +71,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-[#F7F8FA] text-slate-900 dark:bg-[#20201e] dark:text-[#cfcfce] transition-colors duration-300">
         <ThemeProvider>
+          <RecoveryRedirect />
           {children}
         </ThemeProvider>
       </body>

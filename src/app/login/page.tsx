@@ -262,12 +262,12 @@ export default function LoginPage() {
                   Password
                 </label>
 
-                <button
-                  type="button"
+                <Link
+                  href="/forgot-password"
                   className="text-xs text-slate-400 hover:text-slate-900"
                 >
                   Forgot password?
-                </button>
+                </Link>
               </div>
 
               <input
@@ -293,13 +293,16 @@ export default function LoginPage() {
 
         <div className="mt-6 flex flex-col items-center gap-2 text-center text-xs text-slate-500 dark:text-[#a6a6a6]">
           <p>
-            Have an employee invite?{" "}
+            New here?{" "}
             <Link
               href="/register"
               className="font-semibold text-slate-900 hover:underline dark:text-white"
             >
-              Accept Single-Use Invite
+              Create an account
             </Link>
+          </p>
+          <p className="max-w-sm text-[11px] leading-5">
+            Create your personal employee account with your email and password. Organization access is assigned separately.
           </p>
 
           <p>

@@ -24,7 +24,7 @@ async function main() {
       catch { await new Promise((resolve) => setTimeout(resolve, 500)); }
     }
     assert.ok(ready && !exited, "Temporary production server did not start: " + diagnostics);
-    for (const [endpoint, status] of [["/login", 200], ["/dashboard", 307], ["/hr", 307], ["/settings", 307],
+    for (const [endpoint, status] of [["/login", 200], ["/forgot-password", 200], ["/reset-password", 200], ["/dashboard", 307], ["/hr", 307], ["/settings", 307],
       ["/api/auth/session", 401], ["/api/telemetry/live-status", 401], ["/api/telemetry/history", 401], ["/api/hr/workspace", 401],
       ["/api/organizations/aggregate-consent", 401], ["/api/integrations/authorize?provider=github", 401]]) {
       const response = await fetch(base + endpoint, { redirect: "manual", signal: AbortSignal.timeout(10000) });
