@@ -25,7 +25,7 @@ function createLoader(globals = {}, overrides = {}) {
       return require(name);
     }
     vm.runInNewContext(code, { module: compiledModule, exports: compiledModule.exports, require: resolve, console, process, Buffer,
-      Date, Request, Response, AbortSignal, AbortController, TextDecoder, TextEncoder, URL, URLSearchParams, structuredClone, ...globals }, { filename });
+      Date, Request, Response, AbortSignal, AbortController, TextDecoder, TextEncoder, URL, URLSearchParams, structuredClone, atob, ...globals }, { filename });
     return compiledModule.exports;
   }
   return load;

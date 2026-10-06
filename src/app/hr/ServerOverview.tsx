@@ -7,7 +7,7 @@ export default function ServerOverview({ workspace }: { workspace: HRWorkspace }
     <div className="mx-auto max-w-6xl space-y-6">
       <section>
         <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Organizational work patterns</h1>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Daily group averages are released only when at least three consenting employees have a 28-day observation baseline for that metric. Individual observations and personal scores are excluded.</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Daily group averages are released only when at least three consenting employees have 28 earlier valid observed dates for that metric within the past 90 closed UTC dates. Individual observations and personal scores are excluded.</p>
       </section>
       {!workspace.available ? (
         <Card className="p-6"><h2 className="font-semibold">Organization data is unavailable</h2><p className="mt-2 text-sm text-slate-500">The organization backend has not been configured or cannot be reached. No browser demonstration data is used for this account.</p></Card>

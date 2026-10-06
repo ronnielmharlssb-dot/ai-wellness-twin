@@ -43,7 +43,8 @@ npm run dev
 ```
 
 Open http://localhost:3000. Without configured Supabase, development offers explicit
-employee, HR and calibrated demo buttons on the login page. Demo sessions are signed,
+employee, HR and calibrated demo buttons on the login page. Partial or invalid Supabase
+configuration disables demos as well. Demo sessions are signed,
 expire after eight hours and are disabled in production. Set
 `NEXT_PUBLIC_ENABLE_DEMO=false` to disable them in development too.
 
@@ -53,10 +54,20 @@ requests use the validated Host header; forwarded host headers are not trusted
 automatically. Provider redirect URLs must use the same public origin.
 
 For real accounts, configure `NEXT_PUBLIC_SUPABASE_URL` and
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`, enable the intended Supabase auth providers, and add
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or `NEXT_PUBLIC_SUPABASE_ANON_KEY` for a legacy
+project), enable the intended Supabase auth providers, and add
 `http://localhost:3000/api/auth/callback` to allowed auth redirect URLs. HR roles must be
 provisioned in server-managed `app_metadata`; choosing a role in the browser cannot grant
 HR access. Email confirmation is required when enabled by the auth service.
+
+Password recovery starts at `/forgot-password` and ends at `/reset-password`.
+Add `http://localhost:3000/reset-password` and the equivalent production URL to
+Supabase's allowed auth redirect URLs, and set its Site URL to the deployed app.
+Browser requests use PKCE; externally requested recovery emails use token fragments.
+Both are verified with Supabase before a password can change. The app also routes
+recovery fragments arriving at the Site URL to the reset form. Expired links and
+rejected password updates show an error. Passwords and recovery tokens are never
+logged or persisted in the app's local UI cache.
 
 Each workplace integration has separate provider credentials. Set
 `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, `GOOGLE_CLIENT_ID` /
@@ -70,15 +81,21 @@ minutes and is bound to the signed-in employee. Authorization does not establish
 an automatic activity stream: Calendar is a manual import, GitHub supplies public
 event counts, and the other tools still require collectors.
 
+The former `/api/integrations/verify-owner` email/PIN endpoint is retired. It rejects
+anonymous and cross-origin requests, and returns HTTP 410 to employees directing them
+to provider OAuth. It does not send email, create PINs or confirm provider ownership.
+
 ## Verified organization data
 
 For a new database, apply `src/lib/supabase/schema.sql`, then
 `src/lib/supabase/migrations/20261004_tenant_privacy.sql`, followed by
 `src/lib/supabase/migrations/20261005_cloud_ingestion.sql`, then
-`src/lib/supabase/migrations/20261005_source_observation_preferences.sql` through an
+`src/lib/supabase/migrations/20261005_source_observation_preferences.sql`, then
+`src/lib/supabase/migrations/20261005_hr_baseline_evidence.sql` through an
 administrative database connection. For an existing installation, apply the outstanding
-migrations in that order. The last migration upgrades existing Calendar import RPCs to
-support unknown after-hours observations.
+migrations in that order. The source-preferences migration upgrades existing Calendar
+import RPCs to support unknown after-hours observations. The HR evidence migration
+requires valid, recent baseline measurements even when legacy rows predate constraints.
 The migrations have been tested locally with PostgreSQL via PGlite; they are not
 automatically applied to your Supabase project.
 
@@ -87,8 +104,9 @@ administrator. HR access requires both the server-managed auth role and an activ
 HR membership for that organization. Clients cannot promote roles, change cohorts,
 or write arbitrary group aggregates. Employee group sharing starts disabled and can
 be changed under Settings → Privacy & Data. The database releases each metric only
-when at least three consenting contributors have 28 prior observed dates for it.
-The current UTC day and demo records are excluded.
+when at least three consenting contributors have 28 earlier valid observed dates for
+it within the past 90 closed UTC dates. Unknown, invalid, stale and demo measurements
+cannot qualify a contributor. Today and future dates are excluded.
 
 Real HR accounts read this backend and show unavailable state if it has not been
 configured. Local HR demonstrations remain separate. Once the migrations are applied,
@@ -114,6 +132,31 @@ npm run test:smoke
 Regression tests exercise validation, precision, event-time bucketing, retries,
 interval overlap, source preservation, calendar imports, provider failures and auth
 boundaries. They use isolated fixtures, not live provider accounts.
+
+Check an actual deployed site separately:
+
+```sh
+npm run check:deployment -- https://ai-wellness-twin.vercel.app
+```
+
+The checker loads Next.js production environment files and uses
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (falling back to
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`) as the expected configuration. The application and
+checker both prefer the publishable variable when both are set. They accept a public
+publishable key or a legacy
+anon key; secret/service-role keys are rejected. See the
+[Supabase API key types](https://supabase.com/docs/guides/getting-started/api-keys).
+It checks the login/registration pages, the configuration in served browser assets,
+authentication health and email-registration settings, and anonymous access rejection
+for private pages and read endpoints. It exits nonzero when any probe fails, including
+an unresolved backend hostname or an outdated frontend bundle. All probes use GET;
+they do not create accounts, send email, sign in, call RPCs or write observations.
+Keys and response contents are excluded from the report.
+
+Passing this check does not verify email delivery, authenticated ingestion, applied
+database migrations, real provider authorization or live tenant isolation. Those
+still require end-to-end deployment checks. After changing public environment values
+in Vercel, rebuild/redeploy: Next.js embeds those values in browser assets at build time.
 
 ## Ingestion contract
 

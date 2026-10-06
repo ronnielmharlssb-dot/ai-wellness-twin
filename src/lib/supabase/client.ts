@@ -1,19 +1,12 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { getPublicSupabaseConfig } from "./publicConfig";
 
 export function isSupabaseConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+  return getPublicSupabaseConfig() !== null;
 }
 
 export function createClient(options?: { detectSessionInUrl: boolean }) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    return null;
-  }
-
-  return createBrowserClient(url, anonKey, options ? { auth: options } : undefined);
+  const config = getPublicSupabaseConfig();
+  if (!config) return null;
+  return createBrowserClient(config.url, config.key, options ? { auth: options } : undefined);
 }

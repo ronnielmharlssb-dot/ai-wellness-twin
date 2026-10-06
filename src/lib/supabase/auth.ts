@@ -75,7 +75,7 @@ export async function signInUser({ email, password, selectedRole }: {
   email: string; password?: string; selectedRole?: "employee" | "hr";
 }): Promise<{ user: AuthUser | null; error: string | null }> {
   const supabase = createClient();
-  if (!supabase) return { user: null, error: "Account authentication is not configured. Use an explicit demo account for the local preview." };
+  if (!supabase) return { user: null, error: "Account sign-in is unavailable. Please contact the site administrator." };
   if (!password) return { user: null, error: "A password is required." };
   try {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
@@ -93,7 +93,7 @@ export async function signUpUser({ email, password, fullName, role }: {
   email: string; password: string; fullName: string; role: "employee" | "hr";
 }): Promise<{ user: AuthUser | null; error: string | null; confirmationRequired?: boolean }> {
   const supabase = createClient();
-  if (!supabase) return { user: null, error: "Account registration requires the configured authentication service." };
+  if (!supabase) return { user: null, error: "Account registration is unavailable. Please contact the site administrator." };
   if (role !== "employee") return { user: null, error: "HR access requires administrator approval." };
   try {
     const { data, error } = await supabase.auth.signUp({
@@ -109,7 +109,7 @@ export async function signUpUser({ email, password, fullName, role }: {
 export async function signInWithGoogle(customEmail?: string, _options?: { isSignUp?: boolean; role?: "employee" | "hr" }): Promise<{ user: AuthUser | null; error: string | null }> {
   if (_options?.isSignUp && _options.role === "hr") return { user: null, error: "HR access requires administrator approval." };
   const supabase = createClient();
-  if (!supabase) return { user: null, error: "Google sign-in requires the configured authentication service." };
+  if (!supabase) return { user: null, error: "Google sign-in is unavailable. Please contact the site administrator." };
   const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: {
     redirectTo: `${window.location.origin}/api/auth/callback`,
     queryParams: customEmail ? { login_hint: customEmail } : undefined,

@@ -32,7 +32,7 @@ async function main() {
       if (status === 307) assert.equal(new URL(response.headers.get("location"), base).pathname, "/login");
       await response.text();
     }
-    for (const endpoint of ["/api/telemetry/heartbeat", "/api/telemetry/calendar-webhook", "/api/telemetry/source-snapshots", "/api/organizations/aggregate-consent"]) {
+    for (const endpoint of ["/api/telemetry/heartbeat", "/api/telemetry/calendar-webhook", "/api/telemetry/source-snapshots", "/api/organizations/aggregate-consent", "/api/integrations/verify-owner"]) {
       const response = await fetch(base + endpoint, { method: "POST", headers: { Origin: base, "Content-Type": "application/json" }, body: "{}" });
       assert.equal(response.status, 401, endpoint);
       const crossOrigin = await fetch(base + endpoint, { method: "POST", headers: { Origin: "https://other.example" }, body: "{}" });

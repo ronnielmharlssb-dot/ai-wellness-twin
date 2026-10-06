@@ -1,3 +1,5 @@
+import { hasSupabaseConfiguration } from "./publicConfig";
+
 export type AuthUser = {
   id: string;
   email: string;
@@ -19,5 +21,5 @@ export const DEFAULT_ACCOUNTS = [PRIMARY_USER_ACCOUNT, PRIMARY_HR_ACCOUNT, CALIB
 
 export function isDemoModeEnabled() {
   return process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_ENABLE_DEMO !== "false" &&
-    !(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    !hasSupabaseConfiguration();
 }

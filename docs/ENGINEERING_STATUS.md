@@ -11,6 +11,10 @@ with HR access limited to anonymized group trends.
 - Roles come from server-managed `app_metadata`, never user-editable metadata.
 - Explicit signed, expiring demo sessions are available only in local development
   without configured Supabase. Production demo login is disabled.
+- Partial or invalid Supabase configuration also disables demos. Browser and server
+  clients select the same publishable-key variable, with legacy anon-key support;
+  malformed or elevated keys do not enter public SDK clients. The public checker
+  uses the same variable preference. These checks do not replace provider validation.
 - Employee telemetry endpoints enforce authenticated personal ownership.
 - Strict metadata allowlist, identifiers, event times, duration bounds and JSON body limit.
 - Observed intervals retain precision, use event-time UTC dates and split midnight.
@@ -54,10 +58,18 @@ with HR access limited to anonymized group trends.
 - Settings keep verified identity separate from editable browser preferences.
   Pause controls persist; cache export and clearing are explicitly browser-only.
   Persona customization and scheduled alert delivery are shown as inactive.
+- The login page exposes direct employee account creation separately from organization
+  membership. A read-only `check:deployment` command verifies actual served public
+  configuration, authentication availability, email self-registration and anonymous
+  access rejection. Unresolved backends, stale assets and failed probes exit nonzero
+  without reporting keys or creating test accounts.
 - Tool cards distinguish missing data, recorded data and linked accounts.
 - Synthetic calibrated sample records use the `demo` source explicitly.
 - Provider callbacks validate encrypted, expiring state tied to the employee and
   request origin. GitHub uses S256 PKCE; callbacks verify identities before linking.
+- The unused email/PIN verification endpoint is retired behind origin and identity
+  checks. It no longer sends email, stores PINs in temporary files, logs credentials
+  or claims delivery/ownership. Employees are directed to the existing OAuth flow.
 - Google authorization imports only Calendar; it no longer claims to link nine tools.
 - Temporary atomic-replacement locks are retried briefly without deleting the previous
   snapshot. Persistent storage failures remain unacknowledged.
@@ -67,7 +79,9 @@ with HR access limited to anonymized group trends.
   restricts role updates, provisions profiles from verified auth, and isolates HR
   organizations. Fresh role revocations override stale HR claims.
 - Real HR views use a database aggregate function, never browser demonstration data.
-  Each metric requires three consenting contributors with 28 prior observed dates.
+  Each metric requires three consenting contributors with 28 earlier valid observed
+  dates within the past 90 closed UTC dates. Unknown, invalid and stale legacy rows
+  cannot qualify a contributor; a separate upgrade hardens existing installations.
   Missing metrics remain withheld and individual identifiers are excluded.
 - Employees can opt into or withdraw group sharing for verified memberships.
 - Request origin checks and provider callbacks use the actual public origin rather
@@ -111,6 +125,18 @@ with HR access limited to anonymized group trends.
 
 This is a local application under development, not a verified production deployment.
 
+### Deployed authentication check on 2026-10-06
+
+The registration page on `https://ai-wellness-twin.vercel.app` is reachable. Its
+served JavaScript contains the same public Supabase URL and anonymous key as the
+local configuration. That configured project's hostname does not resolve: the
+authentication health request fails with `ENOTFOUND`, and an independent public DNS
+lookup returns status 3 (NXDOMAIN), with no answers. Account creation was not confirmed.
+Restore that Supabase project or configure an active project's public URL and key
+in Vercel and redeploy before claiming registration or sign-in works. This check
+does not establish whether the project was paused, deleted or misconfigured; that
+requires access to its Supabase dashboard.
+
 1. Finish provider ingestion: token retention and refresh, scheduled incremental
    fetches and authenticated native
    webhook subscriptions. A popup closing does not prove authorization. Linking a
@@ -127,7 +153,7 @@ This is a local application under development, not a verified production deploym
    a display cache, not a privacy or tenancy boundary. Workstation and source-import
    queues recover and coordinate tabs in local tests. Their native browser reload,
    storage-quota and abrupt-close behavior still needs deployment testing.
-5. Apply the prepared privacy, ingestion and source-observation-preferences migrations to the real Supabase project, provision
+5. Apply the prepared privacy, ingestion, source-observation-preferences and HR-baseline-evidence migrations to the real Supabase project, provision
    verified memberships/cohorts, and test the live deployment. No live database
    migration has been performed in this worktree.
 6. Expand timezone/calendar coverage, incremental subscription reconciliation and
@@ -154,8 +180,8 @@ journey, native webhook delivery or a production HR privacy boundary.
 
 ## Verification on 2026-10-05
 
-- All 141 tests passed, including PostgreSQL policy execution, upgrades from legacy
-  policies, role escalation, tenant isolation, stale role revocation, consent,
+- All 142 tests passed, including PostgreSQL policy execution, upgrades from legacy
+   policies, role escalation, tenant isolation, stale role revocation, consent,
   contributor thresholds, failed queue writes and public-origin handling. Cloud
   ingestion checks cover interval unions, replay conflicts, source corrections,
   atomic batch rollback, unknown measurements, private history and consented HR
@@ -172,6 +198,12 @@ journey, native webhook delivery or a production HR privacy boundary.
   The final storage-read guard also passed all 25 focused settings, tracker and source
   sync checks: unreadable preferences cannot enable after-hours imports or be
   overwritten by a partial save.
+- HR baseline regressions reproduce premature releases under the prior PostgreSQL
+  function, then test the corrected fresh-installation and idempotent upgrade paths.
+  Stale, non-finite, negative, fractional-break, unknown and demo evidence cannot
+  establish calibration. Today/future rows are excluded; the 90-day boundary is
+  tested. Valid zero observations count, and repairing one metric does not release
+  other metrics whose contributor evidence remains insufficient.
 - Calendar preference tests exercise client validation, queued imports and actual
   PostgreSQL RPC upgrades from the prior two-metric contract. Meeting-only imports
   preserve unknown after-hours values, reject fabricated durations, and retain
@@ -197,5 +229,72 @@ journey, native webhook delivery or a production HR privacy boundary.
   chain. The suggested forced fix would downgrade eslint-config-next across major
   versions and has not been applied.
 - The local configuration contains no administrative database connection. The
-  privacy, cloud ingestion and source-observation-preferences migrations were tested locally and have not been applied
+  privacy, cloud ingestion, source-observation-preferences and HR-baseline-evidence migrations were tested locally and have not been applied
   to Supabase. Real cloud ingestion and provider accounts are not live verified.
+
+## Verification on 2026-10-06
+
+- All 152 regression tests passed. The ten deployment-check tests use local HTTP
+  fixtures and actual CLI subprocesses to verify healthy and failed exit codes,
+  absent authentication DNS, stale browser configuration, rejected or elevated keys,
+  disabled signup, malformed responses, private access failures, response size limits
+  and credential-safe redirect handling. The probes issue GET requests only.
+- The live checker confirmed that the Vercel login and registration pages respond,
+  their assets contain the expected public configuration, and the tested private
+  pages/endpoints reject anonymous access. The authentication probe failed because
+  the configured Supabase hostname does not resolve; the command exited nonzero.
+  No account, email, session, RPC or observation was created by these checks.
+- Lint and the production build including TypeScript passed. The first sandboxed
+  build could not download its configured Google Fonts; the subsequent build with
+  network access succeeded. Private `.data` runtime files are excluded from lint.
+- The production HTTP smoke harness passed and stopped its temporary server. It
+  checked protected-page redirects, ingestion authentication and origin requirements,
+  disabled production demos and exclusion of private runtime data from build tracing.
+- Restoring or replacing the Supabase project, applying migrations and verifying an
+  actual employee account remain external deployment requirements. Neither the
+  passing local tests nor the new public probes establish live authenticated ingestion.
+
+### Authentication recovery follow-up
+
+- The project owner reported that Supabase had been paused. After restoration,
+  the live public deployment checker passed, including authentication health and
+  enabled email registration. A signup attempt reported that the requested account
+  already exists. The password retained from the earlier registration attempt was
+  rejected; a successful employee login remains unverified.
+- The login page's previously inactive password-recovery button now opens a real
+  email-request form. A new password form verifies implicit recovery credentials or
+  a PKCE code with Supabase and checks the provider user again before updating a
+  password. Ordinary cached browser identities cannot authorize an update. Recovery
+  fragments arriving at the configured Site URL are directed to the same form.
+- Focused regressions cover failed email requests, missing configuration, incomplete
+  and expired links, rejected code exchanges, verified provider identity, password
+  validation and failed updates. Deployment and actual email delivery still require
+  separate confirmation; no local test demonstrates access to the owner's inbox.
+- All 160 regression tests passed, followed by lint, the production build including
+  TypeScript, and the production HTTP smoke test. The smoke test now checks both
+  password-recovery pages. Recovery changes were pushed as `4d8e55b`; the deployed
+  reset page was observed rejecting access without a valid recovery session.
+- The authorized live reset request failed with HTTP 500 and Supabase's
+  `unexpected_failure` / `Error sending recovery email` response. An email was not
+  confirmed sent; determining the underlying cause requires Supabase Auth logs and
+  email-service configuration. Google sign-in is enabled and the deployed OAuth flow
+  reached Google's sign-in page. Completing that login requires the account owner;
+  an authenticated dashboard or live ingestion is still unverified.
+
+### Integration endpoint and configuration follow-up
+
+- All 168 tests passed, as did lint, the production build including TypeScript and
+  the production HTTP smoke harness. The harness verifies that the retired endpoint
+  rejects anonymous requests and cross-origin requests through the real Next.js server.
+  Five new configuration tests exercise both client factories, public key formats,
+  variable preference, partial configuration and demo denial. Existing auth tests
+  now verify that partial configuration prevents demo session creation/acceptance.
+  The actual deployment CLI is tested with the publishable alias and rejects an
+  invalid preferred key instead of silently using an older key.
+- Three endpoint regressions exercise origin rejection before authentication,
+  anonymous/HR denial and retirement of employee send/verify calls. Forbidden mail,
+  filesystem, random-number and logging operations are instrumented. Submitted
+  addresses/codes are never parsed or reflected, including malformed/large payloads.
+- Live application of database migrations and authenticated ingestion remain
+  unverified. The email-delivery failure and account-owner Google sign-in handoff
+  remain unresolved external checks; this work does not claim a successful login.

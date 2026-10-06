@@ -87,7 +87,9 @@ test("demo cookies reject tampering and expiration", (t) => {
 });
 
 test("production and configured Supabase disable demo authentication", (t) => {
-  for (const env of [{ NODE_ENV: "production" }, { NEXT_PUBLIC_SUPABASE_URL: "configured", NEXT_PUBLIC_SUPABASE_ANON_KEY: "configured" }]) {
+  for (const env of [{ NODE_ENV: "production" }, { NEXT_PUBLIC_SUPABASE_URL: "configured", NEXT_PUBLIC_SUPABASE_ANON_KEY: "configured" },
+    { NEXT_PUBLIC_SUPABASE_URL: "configured" }, { NEXT_PUBLIC_SUPABASE_ANON_KEY: "configured" },
+    { NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "configured" }]) {
     const { auth } = serverAuth(t, env);
     assert.throws(() => auth.createDemoSession("usr-hr-sarah"), /unavailable/);
     assert.equal(auth.verifyDemoSession("anything"), null);
