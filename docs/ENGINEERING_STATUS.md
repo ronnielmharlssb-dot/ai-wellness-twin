@@ -4,6 +4,40 @@ The continuing objective is to improve AI Wellness Twin while preserving its pur
 private personal work-pattern insights against an individual's 28-day baseline,
 with HR access limited to anonymized group trends.
 
+## Live verification on 2026-10-08
+
+- The follow-up UI fixes remove a duplicate dashboard evidence table, make every
+  pattern filter use the current recorded metric, and describe calibration as
+  observed dates rather than elapsed days. Google sign-in now opens the provider
+  directly; cancelled/expired callbacks return safe, actionable notices instead
+  of a silent redirect or an exception. Failed sign-out retains the session and
+  shows a retry message.
+- All 189 tests, ESLint, the production build and production HTTP smoke checks
+  pass. The local HTTP tests and Windows compiler require execution outside the
+  restricted sandbox. Public demo rehearsal passed all four employee scenarios,
+  the HR contributor threshold in both directions, and walkthrough/reset controls.
+- Google account sign-in successfully reaches the public employee dashboard.
+  Supabase had a localhost Site URL and no additional redirects. The production
+  origin and exact `/api/auth/callback` and `/reset-password` URLs are now saved.
+- A read-only schema inventory confirmed legacy base tables but no cloud-history
+  RPCs or ingestion tables. The five migrations from tenant privacy through
+  organization setup requests were applied with the owner's explicit approval in
+  one transaction, followed by a PostgREST schema-cache reload.
+- The live legacy schema used six `HR and Managers` policy aliases. The tenant
+  migration now removes those aliases; a regression reproduced the omission
+  before the fix. All 27 focused database tests pass, and the exact combined
+  upgrade was locally verified to preserve legacy rows and support reapplication.
+- Post-upgrade live checks confirm the history RPC, removal of legacy aliases,
+  RLS on all four new public tables, denied browser access to private storage and
+  denied direct employee writes outside the validated ingestion functions.
+- The signed-in dashboard loads private history. Its real browser-presence queue
+  received saved acknowledgements, and those observations survived a full reload.
+  A new account correctly remains uncalibrated; no fictional observations were
+  inserted into personal history.
+- Recovery email delivery, live provider imports and live HR tenant/consent
+  journeys still need verification. Earlier dated sections below retain their
+  historical results and do not describe the current database deployment.
+
 ## Implemented in the current worktree
 
 - A public `/demo` route requires no account and presents deterministic fictional

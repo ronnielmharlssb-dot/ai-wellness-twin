@@ -1,240 +1,62 @@
-# AI Wellness Twin — Product & Operations Manual
-**Version 1.0 MVP — product vision and local demonstration**
-*Confidential — For Evaluators, HR Leaders & Technical Teams*
+# AI Wellness Twin - Product Manual
 
-Implementation status: this manual describes the intended system. Provider connections,
-shared persistence, organization verification and server-generated HR aggregates still
-need completion and deployment verification. See [Engineering status](ENGINEERING_STATUS.md)
-for the current capabilities and remaining requirements.
+Updated 7 October 2026. For architecture, APIs, database setup and limitations, read [System Documentation](SYSTEM_DOCUMENTATION.md). Previously generated product-manual/pitch PDFs and HTML exports contain older claims and are superseded by the current documentation.
 
----
+## Purpose
 
-## Table of Contents
-1. [Executive Summary](#1-executive-summary)
-2. [Product Vision & Core Concept](#2-product-vision--core-concept)
-3. [System Architecture & Data Flows](#3-system-architecture--data-flows)
-4. [Role-Based Access Control (RBAC)](#4-role-based-access-control-rbac)
-5. [Employee Experience Portal Walkthrough (`/dashboard`)](#5-employee-experience-portal-walkthrough-dashboard)
-6. [HR Workforce Administration Portal (`/hr`)](#6-hr-workforce-administration-portal-hr)
-7. [Telemetry Integrations & Data Ingestion Engine](#7-telemetry-integrations--data-ingestion-engine)
-8. [Privacy Architecture & $k$-Anonymity Guarantees](#8-privacy-architecture--k-anonymity-guarantees)
-9. [Deployment & Configuration Runbook](#9-deployment--configuration-runbook)
-10. [Test Accounts & Verification Guide](#10-test-accounts--verification-guide)
+AI Wellness Twin compares recorded working time, meeting load, breaks and after-hours activity with your own earlier observations. It gives descriptive feedback and suggestions. It does not diagnose burnout, rate productivity or rank employees. Survey scoring is not implemented.
 
----
+## Presentation demo
 
-## 1. Executive Summary
+Open https://ai-wellness-twin.vercel.app/demo. No account is required; all people and measurements are fictional. Controls change only the sample page's memory.
 
-Modern knowledge workers face chronic burnout driven by back-to-back video conferences, fragmented focus blocks, after-hours messaging, and unspoken cognitive overload. Traditional corporate wellness initiatives fail because they rely on reactive, post-burnout surveys that employees distrust.
+1. Switch between Busier week and Steady week.
+2. Show Building a baseline and Missing observations; explain unavailable evidence.
+3. Open HR group view and change three contributors to two to show suppression.
+4. Advance Data & privacy's sample walkthrough, then reset.
 
-**AI Wellness Twin** is an intelligent, privacy-first digital twin platform that models individual work-life rhythms and provides real-time proactive interventions before burnout occurs. 
+See [Demo Runbook](DEMO_RUNBOOK.md). The sample walkthrough does not prove live provider ingestion or email delivery.
 
-### Key Highlights:
-- **Bi-Directional Telemetry**: Combines passive background signals (calendar density, GitHub commits, IDE focus, messaging timestamps) with active subjective reflections (MBI-GS Maslach Burnout Inventory).
-- **Personalized Calibrated Baseline**: Every employee is evaluated exclusively against their own 28-day historical baseline—never ranked against peers.
-- **Strict $k$-Anonymity ($k \ge 3$)**: HR leadership views aggregated trends only when at least 3 team members belong to a group. Individual raw logs and prompt contents are strictly firewalled.
-- **"What-If" Digital Twin Simulator**: Allows workers to simulate the impact of boundary adjustments (e.g., reducing meeting load by 25% or establishing 2-hour focus blocks) on their predicted burnout recovery score.
+## Personal account
 
----
+At `/register`, enter your name, email and matching password. Confirm email if required, then sign in at `/login`. Configured Google sign-in is available. Personal signup does not grant HR permission or organization membership.
 
-## 2. Product Vision & Core Concept
+If an email is already registered, recover/sign into that account. A failed recovery request does not mean email was sent. The latest 7 October request remained unavailable; successful owner access was not verified. There are no documented universal passwords for the public website.
 
-```
-   ┌─────────────────────────────────────────────────────────────┐
-   │                    AI WELLNESS TWIN ENGINE                  │
-   └─────────────────────────────────────────────────────────────┘
-                                  │
-       ┌──────────────────────────┴──────────────────────────┐
-       ▼                                                     ▼
-┌──────────────────────────────┐              ┌──────────────────────────────┐
-│       PASSIVE SIGNALS        │              │        ACTIVE SIGNALS        │
-│ • IDE Focus Sessions         │              │ • Daily Pulse Check-ins      │
-│ • Calendar Meeting Density   │              │ • MBI-GS Burnout Surveys     │
-│ • GitHub Commit Timestamps   │              │ • Energy & Sleep Logs        │
-│ • After-Hours Chat Windows   │              │ • Stress Self-Assessments    │
-└──────────────────────────────┘              └──────────────────────────────┘
-       │                                                     │
-       └──────────────────────────┬──────────────────────────┘
-                                  ▼
-                ┌──────────────────────────────────┐
-                │   PERSONAL 28-DAY CALIBRATION    │
-                │     Adaptive Baseline Modeling   │
-                └──────────────────────────────────┘
-                                  │
-       ┌──────────────────────────┴──────────────────────────┐
-       ▼                                                     ▼
-┌──────────────────────────────┐              ┌──────────────────────────────┐
-│      EMPLOYEE DASHBOARD      │              │      HR AGGREGATE RADAR      │
-│ (Private & Non-Comparative)  │              │ (Strict k >= 3 Anonymity)    │
-│ • Real-time Health Twin Score│              │ • Department Workload Radar  │
-│ • Pattern Shift Diagnostics  │              │ • Organizational Macro Trends│
-│ • "What-If" Twin Simulator   │              │ • Single-Use Token Invites   │
-│ • Micro-Habit Recommendations│              │ • Overtime Hazard Warning    │
-└──────────────────────────────┘              └──────────────────────────────┘
-```
+## Employee workspace
 
----
+| Page | Use |
+| --- | --- |
+| Overview | Inspect collection status, baseline coverage and comparison evidence. |
+| Patterns | Read changes against your own earlier measurements. |
+| Assessment | Evidence/private reflection; no survey scoring. |
+| Recommendations | Suggestions grounded in supported recorded changes. |
+| Reports | Personal reporting view; missing evidence cannot create a complete index. |
+| Integrations | Distinguish identity links, pending imports, recorded data and missing collectors. |
+| Settings | Save work schedule/capture preferences, pause collection and manage eligible sharing. |
 
-## 3. System Architecture & Data Flows
+The page tracker observes activity inside the app, not every application on your device. Keep the dashboard open while collecting and inspect pending/memory-only notices.
 
-### Frontend & Application Layer
-- **Framework**: Next.js 16 (React 19, Turbopack, App Router)
-- **Styling**: Tailwind CSS with automatic Light/Dark system synchronization
-- **Icons & Visuals**: Lucide React + Vector SVG Brand Assets
+## Baseline and index
 
-### Storage & Telemetry Layer
-- **Client Session Store**: Local state engine with automatic canonical role auto-healing
-- **Cloud Backend**: Supabase (PostgreSQL with Row-Level Security policies)
-- **Signal Aggregator**: Passive workstation activity listener + OAuth webhook ingestion endpoints
+Each metric needs 28 valid earlier observed dates within the past 90 closed UTC dates. The recent window is seven closed dates before today, separate from the baseline. Missing measurements stay unknown.
 
----
+A full descriptive index requires all four metrics on all seven recent dates and defined percentage changes. Building and Partial are expected with insufficient evidence. Stable, Watch and Attention are recording-rule labels, not clinical severity levels.
 
-## 4. Role-Based Access Control (RBAC)
+## Sources and privacy controls
 
-AI Wellness Twin enforces **strict, bi-directional role isolation**:
+Calendar describes scheduled meetings, not confirmed attendance. Public GitHub counts events, not coding hours. Slack/Discord authorization and several other tool cards do not yet supply automatic collectors.
 
-| Dimension | Employee Role (`employee`) | HR Admin Role (`hr`) |
-| :--- | :--- | :--- |
-| **Primary Route** | `/dashboard` | `/hr` |
-| **Access Boundary** | Strictly restricted to personal data; zero access to `/hr` routes. | Strictly restricted to aggregated team views; zero access to `/dashboard`. |
-| **Data Visibility** | Raw individual telemetry, personal surveys, AI twin score, weekly reports. | Anonymized group health indices, macro department shifts ($k \ge 3$). |
-| **Account Management** | Personal profile, integration API tokens, theme density. | Organization verification, team creation, single-use invite generator. |
+Preferences belong to your account in this browser. Set your actual timezone/workdays. Disabled after-hours measurement stays unknown. Private reflections stay in browser storage and do not affect the index or HR output.
 
----
+Device queues retain pending uploads when storage is available. Memory-only observations require the page to remain open. Retry temporary failures and review rejected/expired records. Unlinking cancels pending imports without deleting earlier cloud history. Clearing browser cache does not delete all database data.
 
-## 5. Employee Experience Portal Walkthrough (`/dashboard`)
+## Organization and HR
 
-### 1. Overview (`/dashboard`)
-- **Twin Health Score (0–100)**: Composite vitality metric based on rest buffers, focus continuity, and workload pace.
-- **Burnout Risk Radar**: Multi-axis diagnostic across Exhaustion, Cynicism, Workload Friction, and Boundary Erosion.
-- **Workday Signals by App**: Live 3x3 grid showing active time recorded across all 9 connected tools with direct linking shortcuts.
+A verified personal account submits a setup request at `/register-company`. A trusted administrator must verify the business and separately provision roles, active memberships and cohorts. A request receipt is not verification or HR permission.
 
-### 2. Work Pattern Diagnostics (`/dashboard/patterns`)
-- Detailed breakdown of meeting density vs. uninterrupted deep-work blocks.
-- After-hours activity tracking outside core company hours.
+Real group release needs verified organization access and at least three consenting eligible contributors per metric, each with valid prior evidence. Unsupported metrics are withheld. Private reflections and personal diagnostic views are not HR aggregate inputs.
 
-### 3. Burnout Assessment Surveys (`/dashboard/assessment`)
-- Standardized Maslach Burnout Inventory (MBI-GS) validated questionnaires.
-- Daily subjective pulse logs to cross-correlate subjective feelings with objective telemetry.
+## Before real-user testing
 
-### 4. Personalized Recommendations (`/dashboard/recommendations`)
-- AI-tailored micro-habits (e.g., "Schedule a 25-minute buffer before 3 PM syncs", "Enable GitHub notification curfew").
-
-### 5. Personal Weekly Reports (`/dashboard/reports`)
-- Automated retrospective reports detailing weekly shifts compared against the user's historical 28-day baseline.
-
-### 6. Integrations Manager (`/dashboard/integrations`)
-- Cloud and workstation connector hub for GitHub, VS Code, ChatGPT, Gemini, Claude, Google Calendar, Figma, Slack, and Discord.
-
----
-
-## 6. HR Workforce Administration Portal (`/hr`)
-
-### 1. Workforce Overview (`/hr`)
-- Aggregated organizational wellbeing health indices across all certified departments.
-- Meaningful Change Detection indicator alerting leadership to systemic workload spikes without singling out individuals.
-
-### 2. Teams & Groups Management (`/hr/teams`)
-- Create departmental groups (e.g., Engineering, Design, Product).
-- Enforce **$k$-Anonymity**: Groups with $< 3$ active members display a protective privacy lock to prevent deducing personal metrics.
-- **Single-Use Invite Generator**: Provision cryptographically unique invite links for onboarding new employees.
-
-### 3. Workforce Trends (`/hr/trends`)
-- Longitudinal heatmaps tracking company-wide rest patterns, meeting volume, and boundary sustainability over multiple quarters.
-
----
-
-## 7. Telemetry Integrations & Data Ingestion Engine
-
-AI Wellness Twin integrates with 9 core productivity tools via a **Zero-Content Metadata Ingestion Pipeline**:
-
-```
-                               ┌───────────────────────────┐
-                               │     Productivity Tool     │
-                               │  (Slack, GitHub, VS Code) │
-                               └─────────────┬─────────────┘
-                                             │
-                                             ▼
-                               ┌───────────────────────────┐
-                               │  METADATA FIREWALL SHIELD │
-                               │  ❌ Strip Prompt Text     │
-                               │  ❌ Strip Code Contents   │
-                               │  ❌ Strip Meeting Titles  │
-                               │  ✅ Keep Timestamps Only  │
-                               └─────────────┬─────────────┘
-                                             │
-                                             ▼
-                               ┌───────────────────────────┐
-                               │  Wellness Twin Telemetry  │
-                               │  (Duration & Pacing Only) │
-                               └───────────────────────────┘
-```
-
-### Supported Integrations:
-1. **GitHub**: Commits, PR reviews, and push timestamps to calculate coding windows.
-2. **Visual Studio Code**: Active editor focus time, typing pace, and uninterrupted coding blocks.
-3. **ChatGPT (OpenAI)**: AI consultation session timestamps (*prompt text strictly discarded*).
-4. **Google Gemini**: Research & analysis session windows (*prompt text strictly discarded*).
-5. **Claude (Anthropic)**: Writing and cognitive pacing sessions (*prompt text strictly discarded*).
-6. **Google Calendar / Outlook**: Meeting start/end times and gap durations (*event titles discarded*).
-7. **Figma**: Creative canvas focus blocks and session durations.
-8. **Slack**: Messaging timestamps outside core hours to monitor after-hours communication.
-9. **Discord**: Voice and community chat activity windows.
-
----
-
-## 8. Privacy Architecture & $k$-Anonymity Guarantees
-
-1. **Strict Non-Comparative Evaluation**:
-   Employees are only measured against their own established 28-day baseline. There are zero leaderboards, peer rankings, or competitive metrics.
-2. **Strict $k$-Anonymity ($k \ge 3$)**:
-   Aggregated organizational observations require a minimum of 3 eligible employees in a group before any metrics can be rendered to HR.
-3. **Zero Keystroke / Raw Content Logging**:
-   The metadata firewall strips all text, code snippets, chat messages, and prompt prompts before ingestion.
-4. **Role Isolation**:
-   Employees cannot view HR administrative data; HR administrators cannot view employee personal twin diagnostics.
-
----
-
-## 9. Deployment & Configuration Runbook
-
-### Prerequisites
-- Node.js 20+
-- npm or yarn
-
-### Local Setup
-```bash
-# 1. Clone the repository
-git clone https://github.com/ronnielmharlssb-dot/ai-wellness-twin.git
-cd ai-wellness-twin
-
-# 2. Install dependencies
-npm install
-
-# 3. Start local development server
-npm run dev
-```
-
-### Production Build & Deployment
-```bash
-# Build optimized production bundle
-npm run build
-
-# Start production server
-npm start
-```
-The application is pre-configured for automated continuous deployment to Vercel upon pushes to `main`.
-
----
-
-## 10. Test Accounts & Verification Guide
-
-For evaluators and reviewers testing the live application at [https://ai-wellness-twin.vercel.app](https://ai-wellness-twin.vercel.app):
-
-| Role | Test Account Email | Password | Landing Portal | Capabilities to Test |
-| :--- | :--- | :--- | :--- | :--- |
-| **Employee (Organic)** | `ronnie@company.com` | `password123` | `/dashboard` | • Pure Day 1 Baseline<br>• Organic Telemetry Signals<br>• Workstation Heartbeats<br>• MBI-GS Assessment<br>• Twin Simulator |
-| **HR Admin** | `hr@company.com` | `password123` | `/hr` | • Workforce Health Overview<br>• Teams & $k$-Anonymity Shield<br>• Single-Use Invite Token Generator<br>• Organizational Trends |
-| **Calibrated Demo** | `demo@company.com` | `password123` | `/dashboard` | • **Fully Established 28-Day Baseline**<br>• Pre-seeded Telemetry & Connected Apps<br>• 1-Click Calibration & Reset Controls |
-
-> **Tip**: You can use the **1-click instant demo login buttons** on the login page for effortless switching between the pure organic account, HR Admin, and the fully calibrated 28-day demo account.
+Verify login/email delivery, apply migrations administratively, exercise cloud upload/retry/history and check live tenant/consent suppression. The separate public demo is available while those checks remain outstanding.

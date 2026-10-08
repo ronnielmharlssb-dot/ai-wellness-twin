@@ -146,8 +146,6 @@ export default function DashboardPage() {
         <div className="space-y-6">
           <BaselineCalibrationSuite
             employeeId={user?.id ?? ""}
-            daysCollected={assessment?.daysCollected ?? 0}
-            requiredDays={assessment?.requiredDays ?? 28}
             onMetricsUpdated={() => loadUserData(user?.id ?? "")}
           />
 

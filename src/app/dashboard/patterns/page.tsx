@@ -38,19 +38,19 @@ export default function PatternsPage() {
     if (tab === "all") return assessment.changes;
     if (tab === "focus")
       return assessment.changes.filter((c) =>
-        ["workingHours", "focusContinuity", "ideFocusMinutes"].includes(c.metric)
+        c.metric === "workingHours"
       );
     if (tab === "meetings")
       return assessment.changes.filter((c) =>
-        ["meetingHours", "meetingDensity"].includes(c.metric)
+        c.metric === "meetingLoad"
       );
     if (tab === "boundaries")
       return assessment.changes.filter((c) =>
-        ["afterHoursWork", "weekendWork"].includes(c.metric)
+        c.metric === "afterHoursActivity"
       );
     if (tab === "breaks")
       return assessment.changes.filter((c) =>
-        ["breakFrequency", "restBufferMinutes"].includes(c.metric)
+        c.metric === "breakFrequency"
       );
     return assessment.changes;
   };
@@ -106,7 +106,7 @@ export default function PatternsPage() {
                 </h2>
                 <Badge variant={assessment?.score === null || isBuilding ? "neutral" : "positive"}>
                   {isBuilding
-                    ? `Day ${assessment?.daysCollected ?? 0} / 28`
+                    ? `${assessment?.daysCollected ?? 0} / 28 earlier dates`
                     : assessment?.status === "partial" ? "Partial metric coverage" : "Comparison available"}
                 </Badge>
               </div>
@@ -144,7 +144,7 @@ export default function PatternsPage() {
           <div className="flex flex-row overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0 gap-1.5 rounded-2xl border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900/90 shadow-sm">
             {[
               { id: "all", label: "All Dimensions", icon: Activity },
-              { id: "focus", label: "Deep Work & Focus", icon: Clock },
+              { id: "focus", label: "Recorded Active Time", icon: Clock },
               { id: "meetings", label: "Meeting Load", icon: Calendar },
               { id: "boundaries", label: "Work Boundaries", icon: Moon },
               { id: "breaks", label: "Rest & Recovery", icon: Coffee },
@@ -156,6 +156,7 @@ export default function PatternsPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as PatternTab)}
+                  aria-pressed={active}
                   className={`flex shrink-0 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
                     active
                       ? "bg-slate-900 text-white shadow-sm dark:bg-white dark:text-slate-900"
@@ -204,7 +205,7 @@ export default function PatternsPage() {
               <div className="py-12 text-center">
                 <Activity className="mx-auto h-8 w-8 text-amber-500 animate-pulse" />
                 <p className="mt-3 text-sm font-bold text-slate-900 dark:text-slate-100">
-                  Baseline Gathering Telemetry ({assessment?.daysCollected ?? 0} / 28 days)
+                  Gathering earlier observations ({assessment?.daysCollected ?? 0} / 28 dates)
                 </p>
                 <p className="mx-auto mt-1 max-w-sm text-xs text-slate-500 dark:text-slate-400">
                   Missing measurements stay unknown. See the evidence table for each metric’s earlier and recent observations.

@@ -111,11 +111,17 @@ grant select, insert, update on public.employee_daily_metrics to authenticated;
 
 drop policy if exists "HR can view groups" on public.hr_groups;
 drop policy if exists "HR can manage groups" on public.hr_groups;
+-- Older installations used HR/manager aliases. Leaving a permissive policy
+-- behind would OR its profile-based access with the verified tenant policy.
+drop policy if exists "HR and Managers can view groups" on public.hr_groups;
+drop policy if exists "HR and Managers can manage groups" on public.hr_groups;
 drop policy if exists "Verified HR view groups" on public.hr_groups;
 create policy "Verified HR view groups" on public.hr_groups for select to authenticated
   using (wellness_private.has_membership(organization_id, 'hr'));
 drop policy if exists "HR can view group memberships" on public.hr_group_members;
 drop policy if exists "HR can manage group memberships" on public.hr_group_members;
+drop policy if exists "HR and Managers can view group memberships" on public.hr_group_members;
+drop policy if exists "HR and Managers can manage group memberships" on public.hr_group_members;
 drop policy if exists "Verified HR view group memberships" on public.hr_group_members;
 create policy "Verified HR view group memberships" on public.hr_group_members for select to authenticated
   using (exists (select 1 from public.hr_groups g where g.id = group_id and wellness_private.has_membership(g.organization_id, 'hr')));
@@ -125,6 +131,8 @@ revoke all on public.hr_groups, public.hr_group_members, public.hr_group_observa
 grant select on public.hr_groups, public.hr_group_members to authenticated;
 drop policy if exists "HR can view group observations for eligible groups" on public.hr_group_observations;
 drop policy if exists "HR can insert group observations" on public.hr_group_observations;
+drop policy if exists "HR and Managers can view group observations for eligible groups" on public.hr_group_observations;
+drop policy if exists "HR and Managers can insert group observations" on public.hr_group_observations;
 
 -- No employee identifiers, personal scores or individual rows leave this function.
 -- Thresholds count distinct consenting contributors with 28 prior valid observed dates

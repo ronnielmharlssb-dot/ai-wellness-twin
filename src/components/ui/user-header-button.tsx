@@ -10,6 +10,8 @@ export function UserHeaderButton({ defaultRole = "employee" }: { defaultRole?: "
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,8 +43,16 @@ export function UserHeaderButton({ defaultRole = "employee" }: { defaultRole?: "
     : "A";
 
   const handleLogout = async () => {
-    await signOutUser();
-    router.push("/login");
+    setSigningOut(true);
+    setLogoutError("");
+    try {
+      await signOutUser();
+      router.push("/login");
+    } catch {
+      setLogoutError("Sign-out could not complete. Please retry.");
+    } finally {
+      setSigningOut(false);
+    }
   };
 
   return (
@@ -83,11 +93,13 @@ export function UserHeaderButton({ defaultRole = "employee" }: { defaultRole?: "
             <button
               type="button"
               onClick={handleLogout}
+              disabled={signingOut}
               className="flex items-center gap-2.5 w-full rounded-xl px-3 py-2 text-left text-xs font-medium text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
             >
               <LogOut className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400" />
-              <span>Sign out</span>
+              <span>{signingOut ? "Signing out…" : "Sign out"}</span>
             </button>
+            {logoutError && <p role="alert" className="px-3 py-2 text-xs text-rose-600 dark:text-rose-400">{logoutError}</p>}
           </div>
         </div>
       )}

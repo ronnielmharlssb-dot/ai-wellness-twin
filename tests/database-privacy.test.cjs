@@ -39,11 +39,32 @@ test("database privacy policies enforce role authority, tenant membership and pe
     create policy "HR can manage groups" on public.hr_groups for all using (
       exists(select 1 from public.profiles p where p.id=auth.uid() and p.role='hr')
     );
+    -- The deployed legacy schema also used these HR/manager policy names.
+    -- PostgreSQL combines permissive policies with OR, so they must be removed.
+    create policy "HR and Managers can view groups" on public.hr_groups for select using (
+      exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('hr','manager'))
+    );
+    create policy "HR and Managers can manage groups" on public.hr_groups for all using (
+      exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('hr','manager'))
+    );
+    create policy "HR and Managers can view group memberships" on public.hr_group_members for select using (
+      exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('hr','manager'))
+    );
+    create policy "HR and Managers can manage group memberships" on public.hr_group_members for all using (
+      exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('hr','manager'))
+    );
+    create policy "HR and Managers can view group observations for eligible groups" on public.hr_group_observations for select using (
+      exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('hr','manager'))
+    );
+    create policy "HR and Managers can insert group observations" on public.hr_group_observations for insert with check (
+      exists(select 1 from public.profiles p where p.id=auth.uid() and p.role in ('hr','manager'))
+    );
     grant all on public.profiles, public.employee_daily_metrics, public.hr_groups,
       public.hr_group_members, public.hr_group_observations to authenticated;
   `);
   await db.exec(migration);
   await db.exec(migration); // Safe to reapply to a migrated installation.
+  assert.equal((await db.query("select count(*)::integer remaining from pg_policies where schemaname='public' and policyname like 'HR and Managers%'")).rows[0].remaining, 0);
   await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'new@example.com',$2)", [id(99), JSON.stringify({ full_name: "New account", role: "hr" })]);
   const newProfile = (await db.query("select role, full_name from public.profiles where id=$1", [id(99)])).rows[0];
   assert.equal(newProfile.role, "employee");

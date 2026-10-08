@@ -5,6 +5,10 @@ own 28-day baseline. The intended HR experience exposes eligible group aggregate
 See [engineering status](docs/ENGINEERING_STATUS.md) for implemented capabilities and
 requirements still needed before production use.
 
+Read the [system documentation](docs/SYSTEM_DOCUMENTATION.md) for architecture,
+user workflows, ingestion, privacy, deployment and troubleshooting.
+The [product manual](docs/PRODUCT_MANUAL.md) provides a shorter current user guide.
+
 For the presentation, open [the public interactive demo](https://ai-wellness-twin.vercel.app/demo).
 It needs no account and uses clearly labeled fictional data, with employee scenarios,
 baseline evidence, HR privacy suppression and a sample data walkthrough. It does not

@@ -14,7 +14,7 @@ export function BaselineProgressTracker({
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium text-slate-700 dark:text-slate-300">
-          Calibration Progress: <strong className="text-slate-900 dark:text-white">{daysCollected}</strong> / {requiredDays} days
+          Earlier observed dates: <strong className="text-slate-900 dark:text-white">{daysCollected}</strong> / {requiredDays}
         </span>
         <span className="font-semibold text-slate-900 dark:text-white">{percentage}%</span>
       </div>
@@ -28,9 +28,9 @@ export function BaselineProgressTracker({
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
-        <span>Day 1 (Started)</span>
-        <span className="dark:text-[#a8c7fa] font-medium">{remaining === 0 ? "Baseline Complete" : `${remaining} days to full baseline`}</span>
-        <span>Day 28 (Established)</span>
+        <span>0 observations</span>
+        <span className="dark:text-[#a8c7fa] font-medium">{remaining === 0 ? "Check each metric's evidence" : `${remaining} earlier observations still needed`}</span>
+        <span>{requiredDays} observations</span>
       </div>
     </div>
   );

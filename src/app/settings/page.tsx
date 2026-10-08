@@ -85,6 +85,8 @@ export default function SettingsPage() {
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isTrackerRunning, setIsTrackerRunning] = useState(() => getUserSettings().telemetry.heartbeatTrackerEnabled);
 
@@ -490,16 +492,26 @@ export default function SettingsPage() {
                     </div>
                     <Button
                       variant="outline"
+                      disabled={signingOut}
                       onClick={async () => {
-                        await signOutUser();
-                        router.push("/login");
+                        setSigningOut(true);
+                        setLogoutError("");
+                        try {
+                          await signOutUser();
+                          router.push("/login");
+                        } catch {
+                          setLogoutError("Sign-out could not complete. Please retry.");
+                        } finally {
+                          setSigningOut(false);
+                        }
                       }}
                       className="flex items-center gap-2 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 shrink-0"
                     >
                       <LogOut className="h-3.5 w-3.5" />
-                      Sign Out
+                      {signingOut ? "Signing out…" : "Sign Out"}
                     </Button>
                   </div>
+                  {logoutError && <p role="alert" className="mt-3 text-xs text-rose-600 dark:text-rose-400">{logoutError}</p>}
                 </Card>
               </div>
             )}

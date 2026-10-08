@@ -1,4 +1,4 @@
-# Presentation demo — October 7, 2026
+# Presentation demo — verified October 8, 2026
 
 Open **https://ai-wellness-twin.vercel.app/demo**. No account, password, email,
 Supabase session or provider authorization is required. The home and login pages
@@ -26,6 +26,9 @@ The demo changes only its in-memory view; refreshing or Reset demo restores it.
 
 ## Rehearsal checklist
 
+The public controls below were rehearsed successfully on October 8. Repeat before
+the presentation to check connectivity and the presenting device.
+
 - Open `/demo` in a fresh browser without signing in; confirm the page renders.
 - Change all four employee scenarios and confirm their values/index change.
 - Check the HR threshold in both directions: 3 → 2 → 3.
@@ -43,11 +46,15 @@ deterministic synthetic records. The HR screen illustrates privacy suppression
 using fictional averages. It does not read or create real users, measurements,
 consent, organizations or provider links.
 
-Real account access and cloud ingestion are separate. Supabase was restored,
-but the authorized recovery email failed and a successful account-owner login
-has not been verified. Prepared SQL migrations are locally tested and have not
-been applied by this agent to the live database. Do not present the sample data
-walkthrough as evidence of live ingestion, email delivery or provider integration.
+As verified on October 8, Google sign-in reaches the public employee dashboard.
+Supabase's Site URL and exact callback/recovery redirects are configured for the
+public website. The five outstanding database migrations were applied with the
+owner's approval; private history loads and actual browser-presence observations
+survive a dashboard reload. A new account still needs its own observed dates for
+personal comparisons. Use `/demo` for the presentation's fictional populated views.
+Recovery email delivery, live provider imports and live HR tenant/consent journeys
+remain unverified. The sample data walkthrough illustrates ingestion; it does not
+demonstrate any of those remaining journeys.
 
 ## Developer checks
 

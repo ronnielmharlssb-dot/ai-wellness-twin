@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signInUser, signInWithGoogle, loginAsRole, loginAsCalibratedDemo, isDemoModeEnabled } from "@/lib/supabase/auth";
 import { seedCalibratedDemoAccount, isDemoAccountCalibrated } from "@/lib/wellbeing/calibratedAccountSeeder";
 import { Button } from "@/components/ui/button";
@@ -10,17 +10,23 @@ import { GoogleLogo } from "@/components/ui/brand-logos";
 import { WellnessTwinLogo } from "@/components/ui/wellness-twin-logo";
 
 export default function LoginPage() {
+  return <Suspense fallback={<main className="flex min-h-screen items-center justify-center"><p role="status">Loading sign-in…</p></main>}><LoginContent /></Suspense>;
+}
+
+function LoginContent() {
   const router = useRouter();
+  const params = useSearchParams();
+  const callbackCode = params.get("error");
+  const callbackError = callbackCode === "authentication_failed"
+    ? "We couldn't complete sign-in. Please start a new sign-in attempt."
+    : callbackCode === "sign_in_cancelled" ? "Google sign-in was cancelled. You can try again."
+    : callbackCode === "session_expired" ? "This sign-in attempt expired or could not be verified. Please start again from this page." : "";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Google login modal state for interactive sign-in
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [googleEmailInput, setGoogleEmailInput] = useState("");
-  const [notFoundEmail, setNotFoundEmail] = useState<string | null>(null);
+  const notice = error ?? callbackError;
 
   const handleQuickLogin = async (role: "employee" | "hr") => {
     setIsLoading(true);
@@ -53,7 +59,6 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setNotFoundEmail(null);
 
     if (!email.trim() || !password.trim()) {
       setError("Please enter both email and password.");
@@ -88,42 +93,15 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSignInClick = () => {
-    setError("");
-    setNotFoundEmail(null);
-    setShowGoogleModal(true);
-  };
-
-  const handleConfirmGoogleAuth = async (selectedEmail?: string) => {
-    const targetEmail = (selectedEmail || googleEmailInput.trim() || "alex.morgan@gmail.com").toLowerCase();
+  const handleGoogleSignInClick = async () => {
     setIsLoading(true);
     setError("");
-    setNotFoundEmail(null);
 
     try {
-      const { user, error: googleError } = await signInWithGoogle(targetEmail, { isSignUp: false });
-
-      if (googleError) {
-        setError(googleError);
-        if (googleError.includes("not found")) {
-          setNotFoundEmail(targetEmail);
-        }
-        setShowGoogleModal(false);
-        return;
-      }
-
-      setShowGoogleModal(false);
-      if (user) {
-        if (user.role === "hr") {
-          router.push("/hr");
-        } else {
-          router.push("/dashboard");
-        }
-      }
-    } catch (err) {
-      console.error("Google sign-in error:", err);
-      setError("Google verification failed. Please try again.");
-      setShowGoogleModal(false);
+      const { error: googleError } = await signInWithGoogle();
+      if (googleError) setError(googleError);
+    } catch {
+      setError("Google sign-in could not start. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -153,20 +131,10 @@ export default function LoginPage() {
 
         <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm dark:border-[#383734] dark:bg-[#2c2b28] space-y-4">
           
-          {error && (
-            <div className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-xs text-amber-900">
-              <p className="font-semibold">Verification Notice:</p>
-              <p>{error}</p>
-              {notFoundEmail && (
-                <div className="pt-2">
-                  <Link
-                    href={`/register?email=${encodeURIComponent(notFoundEmail)}`}
-                    className="inline-flex items-center gap-1 font-bold text-amber-950 underline hover:text-black"
-                  >
-                    → Create account for {notFoundEmail}
-                  </Link>
-                </div>
-              )}
+          {notice && (
+            <div role="alert" className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-xs text-amber-900">
+              <p className="font-semibold">Sign-in notice</p>
+              <p>{notice}</p>
             </div>
           )}
 
@@ -317,57 +285,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Interactive Google Sign-In Dialog Modal with Account Verification */}
-        {showGoogleModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 border border-slate-100 shadow-sm">
-                  <GoogleLogo className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">
-                    Sign in with Google
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Verifying registered account
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-5 space-y-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">
-                    Enter your Google / Gmail address:
-                  </label>
-                  <input
-                    type="email"
-                    value={googleEmailInput}
-                    onChange={(e) => setGoogleEmailInput(e.target.value)}
-                    placeholder="e.g. alex.morgan@gmail.com"
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2 text-xs outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex items-center justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowGoogleModal(false)}
-                  className="text-xs"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => handleConfirmGoogleAuth()}
-                  className="text-xs"
-                >
-                  Verify & Sign in
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </main>
   );
